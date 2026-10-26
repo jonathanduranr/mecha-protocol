@@ -1,0 +1,22 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/grid_background.gd" id="2_bg"]
+[ext_resource type="PackedScene" path="res://scenes/mecha.tscn" id="3_mecha"]
+[ext_resource type="Script" path="res://scripts/spawner.gd" id="4_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="GridBackground" type="Node2D" parent="."]
+script = ExtResource("2_bg")
+
+[node name="Mecha" parent="." instance=ExtResource("3_mecha")]
+position = Vector2(360, 640)
+
+[node name="Spawner" type="Node2D" parent="." node_paths=PackedStringArray("mecha")]
+script = ExtResource("4_spawner")
+mecha = NodePath("../Mecha")
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]

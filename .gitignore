@@ -1,0 +1,15 @@
+# Godot 4+ specific ignores
+.godot/
+*.translation
+
+# Imported files
+.import/
+
+# Mono/C# specific ignores
+.mono/
+data_*/
+mono_crash.*.json
+
+# System files
+.DS_Store
+*.tmp
