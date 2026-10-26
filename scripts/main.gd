@@ -11,6 +11,8 @@ func _ready() -> void:
 		mecha.xp_changed.connect(hud.update_xp)
 	if mecha.has_signal("level_up"):
 		mecha.level_up.connect(_on_mecha_level_up)
+	if mecha.has_signal("mecha_destroyed"):
+		mecha.mecha_destroyed.connect(hud.show_game_over)
 		
 	if hud.has_signal("upgrade_selected"):
 		hud.upgrade_selected.connect(_on_upgrade_selected)

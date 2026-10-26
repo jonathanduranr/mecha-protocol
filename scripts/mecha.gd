@@ -3,6 +3,7 @@ extends Area2D
 signal health_changed(current: float, max_val: float)
 signal xp_changed(current: int, needed: int, level: int)
 signal level_up(new_level: int)
+signal mecha_destroyed(final_level: int)
 
 @export var max_health: float = 120.0
 @export var base_speed: float = 260.0
@@ -221,7 +222,7 @@ func take_damage(amount: float) -> void:
 	damage_cooldown = 0.35
 	emit_signal("health_changed", current_health, max_health)
 	if current_health <= 0:
-		print("MECHA CRÍTICAMENTE DAÑADO")
+		emit_signal("mecha_destroyed", level)
 
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("enemies") and "contact_damage" in area:

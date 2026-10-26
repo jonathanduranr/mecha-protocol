@@ -11,6 +11,10 @@ signal upgrade_selected(upgrade_id: String)
 @onready var upgrade_panel: Control = $UpgradePanel
 @onready var cards_container: VBoxContainer = $UpgradePanel/CenterContainer/VBoxContainer/CardsContainer
 
+@onready var game_over_panel: Control = $GameOverPanel
+@onready var game_over_stats: Label = $GameOverPanel/CenterContainer/VBoxContainer/StatsLabel
+@onready var restart_button: Button = $GameOverPanel/CenterContainer/VBoxContainer/RestartButton
+
 var elapsed_seconds: float = 0.0
 
 var archetype_upgrades := [
@@ -54,6 +58,8 @@ var archetype_upgrades := [
 
 func _ready() -> void:
 	upgrade_panel.visible = false
+	game_over_panel.visible = false
+	restart_button.pressed.connect(_on_restart_pressed)
 
 func _process(delta: float) -> void:
 	if not get_tree().paused:
@@ -128,3 +134,15 @@ func _on_card_selected(upgrade_id: String) -> void:
 	upgrade_panel.visible = false
 	get_tree().paused = false
 	emit_signal("upgrade_selected", upgrade_id)
+
+func show_game_over(final_level: int) -> void:
+	get_tree().paused = true
+	upgrade_panel.visible = false
+	var minutes := int(elapsed_seconds) / 60
+	var seconds := int(elapsed_seconds) % 60
+	game_over_stats.text = "⏱️ TIEMPO SOBREVIVIDO: %02d:%02d\n⭐ NIVEL ALCANZADO: %d" % [minutes, seconds, final_level]
+	game_over_panel.visible = true
+
+func _on_restart_pressed() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
