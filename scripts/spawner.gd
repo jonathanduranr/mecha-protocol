@@ -1,11 +1,11 @@
 extends Node2D
 
 @export var mecha: Node2D
-@export var base_spawn_interval: float = 0.95
+@export var base_spawn_interval: float = 0.65
 
 var spawn_timer: float = 0.0
 var elapsed_time: float = 0.0
-var next_swarm_time: float = 60.0
+var next_swarm_time: float = 50.0
 
 var boss_spawned_3m: bool = false
 var boss_spawned_6m: bool = false
@@ -20,48 +20,51 @@ func _physics_process(delta: float) -> void:
 	# Evento de Enjambres Periódicos (Swarm Rushes)
 	if elapsed_time >= next_swarm_time:
 		trigger_swarm_event()
-		next_swarm_time = elapsed_time + randf_range(50.0, 65.0)
+		next_swarm_time = elapsed_time + randf_range(45.0, 55.0)
 	
 	# Eventos de Jefes por tiempo
 	if elapsed_time >= 180.0 and not boss_spawned_3m:
 		boss_spawned_3m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡COLOSO CENTINELA DETECTADO! ⚠️")
-		spawn_specific_enemy("boss", 1600.0)
+		spawn_specific_enemy("boss", 2200.0)
 		
 	if elapsed_time >= 360.0 and not boss_spawned_6m:
 		boss_spawned_6m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡TITÁN DE ASALTO MK-II DETECTADO! ⚠️")
-		spawn_specific_enemy("boss", 3500.0)
+		spawn_specific_enemy("boss", 4800.0)
 	
-	var current_interval: float = max(0.40, base_spawn_interval - (elapsed_time * 0.0015))
+	# Mayor densidad de spawns continuos
+	var current_interval: float = max(0.24, base_spawn_interval - (elapsed_time * 0.0022))
 	
 	if spawn_timer <= 0:
 		spawn_timer = current_interval
 		process_wave_spawns()
 
 func process_wave_spawns() -> void:
-	if elapsed_time < 75.0:
-		spawn_specific_enemy("scout", 30.0 + (elapsed_time * 0.3))
-		if elapsed_time > 40.0 and randf() < 0.35:
-			spawn_specific_enemy("scout", 30.0 + (elapsed_time * 0.3))
-	elif elapsed_time < 150.0:
-		spawn_specific_enemy("scout", 50.0 + (elapsed_time * 0.35))
-		if randf() < 0.28:
-			spawn_specific_enemy("tank", 180.0 + (elapsed_time * 0.8))
-		if elapsed_time > 95.0 and randf() < 0.22:
-			spawn_specific_enemy("shooter", 75.0 + (elapsed_time * 0.4))
-	else:
+	if elapsed_time < 60.0:
+		spawn_specific_enemy("scout", 35.0 + (elapsed_time * 0.4))
+		if elapsed_time > 30.0 and randf() < 0.45:
+			spawn_specific_enemy("scout", 35.0 + (elapsed_time * 0.4))
+	elif elapsed_time < 130.0:
+		spawn_specific_enemy("scout", 60.0 + (elapsed_time * 0.5))
 		if randf() < 0.35:
-			spawn_specific_enemy("swarm", 50.0 + (elapsed_time * 0.25))
-		elif randf() < 0.30:
-			spawn_specific_enemy("shooter", 90.0 + (elapsed_time * 0.4))
-		else:
-			spawn_specific_enemy("scout", 80.0 + (elapsed_time * 0.4))
-			
-		if randf() < 0.30:
-			spawn_specific_enemy("tank", 280.0 + (elapsed_time * 1.0))
+			spawn_specific_enemy("tank", 220.0 + (elapsed_time * 1.0))
+		if elapsed_time > 75.0 and randf() < 0.30:
+			spawn_specific_enemy("shooter", 90.0 + (elapsed_time * 0.5))
+	else:
+		# Fase de combate intenso: múltiples spawns por tick
+		for i in range(2):
+			if randf() < 0.40:
+				spawn_specific_enemy("swarm", 65.0 + (elapsed_time * 0.35))
+			elif randf() < 0.35:
+				spawn_specific_enemy("shooter", 110.0 + (elapsed_time * 0.5))
+			else:
+				spawn_specific_enemy("scout", 95.0 + (elapsed_time * 0.5))
+				
+		if randf() < 0.35:
+			spawn_specific_enemy("tank", 340.0 + (elapsed_time * 1.2))
 
 func trigger_swarm_event() -> void:
 	if not is_instance_valid(mecha):
@@ -69,15 +72,13 @@ func trigger_swarm_event() -> void:
 		
 	var is_ring := randf() < 0.5
 	if is_ring:
-		# Enjambre en anillo cerrado (tipo Vampire Survivors)
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡ANILLO DE ASALTO ENTRANTE! ⚠️")
-		spawn_circle_swarm(22, "scout" if elapsed_time < 120.0 else "swarm")
+		spawn_circle_swarm(28, "scout" if elapsed_time < 100.0 else "swarm")
 	else:
-		# Estampida masiva por los flancos
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡ENJAMBRE HOSTIL MASIVO! ⚠️")
-		spawn_flank_stampede(24, "swarm" if elapsed_time > 90.0 else "scout")
+		spawn_flank_stampede(30, "swarm" if elapsed_time > 70.0 else "scout")
 
 ## Spawnea un círculo de enemigos alrededor del mecha que convergen hacia él
 func spawn_circle_swarm(count: int, enemy_type: String) -> void:

@@ -1,8 +1,8 @@
 class_name EnemyBullet
 extends Area2D
 
-@export var speed: float = 260.0
-@export var damage: float = 14.0
+@export var speed: float = 290.0
+@export var damage: float = 22.0
 @export var lifetime: float = 3.5
 
 var direction: Vector2 = Vector2.DOWN

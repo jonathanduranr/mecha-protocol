@@ -39,34 +39,34 @@ func setup_type() -> void:
 	var shape := $CollisionShape2D.shape as CircleShape2D
 	match drone_type:
 		"scout":
-			speed = 160.0
-			contact_damage = 12.0
+			speed = 185.0
+			contact_damage = 18.0
 			xp_reward = 10
 			knockback_resistance = 0.15
 			if shape: shape.radius = 16.0
 		"tank":
-			speed = 85.0
-			contact_damage = 25.0
+			speed = 95.0
+			contact_damage = 42.0
 			xp_reward = 40
-			knockback_resistance = 0.85 # Casi no retrocede
+			knockback_resistance = 0.85
 			if shape: shape.radius = 28.0
 		"swarm":
-			speed = 175.0
-			contact_damage = 14.0
+			speed = 285.0 # Más rápido que el Mecha (260 px/s) para obligar a dispararle
+			contact_damage = 22.0
 			xp_reward = 12
 			knockback_resistance = 0.05
 			if shape: shape.radius = 14.0
 		"shooter":
-			speed = 110.0
-			contact_damage = 10.0
+			speed = 120.0
+			contact_damage = 16.0
 			xp_reward = 25
 			knockback_resistance = 0.4
 			if shape: shape.radius = 18.0
 		"boss":
-			speed = 65.0
-			contact_damage = 45.0
+			speed = 75.0
+			contact_damage = 55.0
 			xp_reward = 250
-			knockback_resistance = 1.0 # Inmune a knockback
+			knockback_resistance = 1.0
 			if shape: shape.radius = 48.0
 
 func _physics_process(delta: float) -> void:
@@ -160,7 +160,7 @@ func process_shooter_behavior(delta: float, dist: float, dir_to_mecha: Vector2, 
 	global_position += final_move * speed * delta
 	
 	if shoot_timer <= 0:
-		shoot_timer = 2.2
+		shoot_timer = 1.7
 		fire_enemy_bullet(dir_to_mecha)
 
 func fire_enemy_bullet(direction: Vector2) -> void:
