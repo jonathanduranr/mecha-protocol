@@ -14,10 +14,10 @@ export default {
     const url = new URL(request.url);
 
     try {
-      // 1. OBTENER TOP 10 MUNDIAL (Mejor récord por cada piloto)
+      // 1. OBTENER TOP 10 MUNDIAL (Mejores puntuaciones públicas)
       if (request.method === "GET" && (url.pathname === "/api/leaderboard" || url.pathname === "/leaderboard" || url.pathname === "/")) {
         const query = `
-          SELECT pilot_id, survival_time, level, created_at 
+          SELECT pilot_name, survival_time, level, created_at 
           FROM leaderboard 
           ORDER BY survival_time DESC 
           LIMIT 10
@@ -31,7 +31,7 @@ export default {
         });
       }
 
-      // 2. REGISTRAR O ACTUALIZAR PUNTUACIÓN DE PILOTO (UPSERT)
+      // 2. REGISTRAR O ACTUALIZAR PUNTUACIÓN DE PILOTO
       if (request.method === "POST" && (url.pathname === "/api/score" || url.pathname === "/score")) {
         let body;
         try {
@@ -43,11 +43,19 @@ export default {
           });
         }
 
-        let pilot_id = String(body.pilot_id || "PILOTO-DESCONOCIDO").trim();
-        pilot_id = pilot_id.replace(/[^a-zA-Z0-9_\-]/g, "").substring(0, 16);
-        if (!pilot_id) pilot_id = "PILOTO-MK1";
+        // Validación de identidad (UUID del dispositivo)
+        let user_id = String(body.user_id || "").trim();
+        if (!user_id || user_id.length < 10 || user_id.length > 64) {
+          return new Response(JSON.stringify({ success: false, error: "Invalid user_id" }), {
+            status: 400,
+            headers: corsHeaders
+          });
+        }
 
-        let old_pilot_id = body.old_pilot_id ? String(body.old_pilot_id).trim() : null;
+        // Nombre de piloto cosmético / visible
+        let pilot_name = String(body.pilot_name || "PILOTO-MK1").trim();
+        pilot_name = pilot_name.replace(/[^a-zA-Z0-9_\-]/g, "").substring(0, 16);
+        if (!pilot_name) pilot_name = "PILOTO-MK1";
 
         const survival_time = parseFloat(body.survival_time) || 0.0;
         const level = parseInt(body.level, 10) || 1;
@@ -59,16 +67,12 @@ export default {
           });
         }
 
-        // Si cambió de apodo en la misma sesión, limpiar el nombre anterior
-        if (old_pilot_id && old_pilot_id !== pilot_id) {
-          await env.DB.prepare("DELETE FROM leaderboard WHERE pilot_id = ?").bind(old_pilot_id).run();
-        }
-
-        // UPSERT: 1 entrada única por piloto con su récord máximo
+        // UPSERT SEGURO: Sólo afecta a la fila que tiene este user_id
         await env.DB.prepare(`
-          INSERT INTO leaderboard (pilot_id, survival_time, level, created_at)
-          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-          ON CONFLICT(pilot_id) DO UPDATE SET
+          INSERT INTO leaderboard (user_id, pilot_name, survival_time, level, updated_at)
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id) DO UPDATE SET
+            pilot_name = excluded.pilot_name,
             survival_time = CASE 
               WHEN excluded.survival_time > leaderboard.survival_time THEN excluded.survival_time 
               ELSE leaderboard.survival_time 
@@ -77,28 +81,38 @@ export default {
               WHEN excluded.survival_time > leaderboard.survival_time THEN excluded.level 
               ELSE leaderboard.level 
             END,
-            created_at = CASE 
-              WHEN excluded.survival_time > leaderboard.survival_time THEN CURRENT_TIMESTAMP 
-              ELSE leaderboard.created_at 
-            END
-        `).bind(pilot_id, survival_time, level).run();
+            updated_at = CURRENT_TIMESTAMP
+        `).bind(user_id, pilot_name, survival_time, level).run();
 
-        // Calcular posición actual del piloto en el ranking mundial
-        const rankResult = await env.DB.prepare(
-          "SELECT COUNT(*) as better_count FROM leaderboard WHERE survival_time > (SELECT survival_time FROM leaderboard WHERE pilot_id = ?)"
-        ).bind(pilot_id).first();
+        // Calcular posición en el ranking mundial
+        const rankResult = await env.DB.prepare(`
+          SELECT COUNT(*) as better_count 
+          FROM leaderboard 
+          WHERE survival_time > (SELECT survival_time FROM leaderboard WHERE user_id = ?)
+        `).bind(user_id).first();
         const rank = (rankResult?.better_count || 0) + 1;
 
         // Traer Top 10 actualizado
-        const { results: top10 } = await env.DB.prepare(
-          "SELECT pilot_id, survival_time, level, created_at FROM leaderboard ORDER BY survival_time DESC LIMIT 10"
-        ).all();
+        const { results: top10 } = await env.DB.prepare(`
+          SELECT user_id, pilot_name, survival_time, level, created_at 
+          FROM leaderboard 
+          ORDER BY survival_time DESC 
+          LIMIT 10
+        `).all();
+
+        // Marcar cuál es el usuario en el top10 de forma segura
+        const sanitizedTop10 = (top10 || []).map(row => ({
+          pilot_name: row.pilot_name,
+          survival_time: row.survival_time,
+          level: row.level,
+          is_me: row.user_id === user_id
+        }));
 
         return new Response(JSON.stringify({ 
           success: true, 
           rank: rank,
-          pilot_id: pilot_id,
-          top10: top10 || [] 
+          pilot_name: pilot_name,
+          top10: sanitizedTop10
         }), {
           headers: corsHeaders
         });

@@ -25,8 +25,8 @@ const SAVE_PATH: String = "user://pilot_profile.json"
 
 var elapsed_seconds: float = 0.0
 var final_level_reached: int = 1
-var current_pilot_id: String = ""
-var last_submitted_pilot_id: String = ""
+var current_user_id: String = ""
+var current_pilot_name: String = ""
 var is_submitting: bool = false
 
 var archetype_upgrades := [
@@ -77,8 +77,8 @@ func _ready() -> void:
 	pilot_input.text_submitted.connect(func(text_val): apply_new_pilot_name(text_val))
 	
 	http_request.request_completed.connect(_on_http_request_completed)
-	current_pilot_id = load_pilot_id()
-	pilot_input.text = current_pilot_id
+	load_profile()
+	pilot_input.text = current_pilot_name
 
 func _process(delta: float) -> void:
 	if not get_tree().paused:
@@ -163,14 +163,13 @@ func show_game_over(final_level: int) -> void:
 	var seconds := int(elapsed_seconds) % 60
 	game_over_stats.text = "TIEMPO: %02d:%02d   |   NIVEL: %d" % [minutes, seconds, final_level]
 	
-	current_pilot_id = load_pilot_id()
-	last_submitted_pilot_id = current_pilot_id
-	pilot_input.text = current_pilot_id
+	load_profile()
+	pilot_input.text = current_pilot_name
 	
 	game_over_panel.visible = true
-	submit_score_to_cloud(current_pilot_id)
+	submit_score_to_cloud()
 
-func submit_score_to_cloud(pilot_id: String, old_id: String = "") -> void:
+func submit_score_to_cloud() -> void:
 	if is_submitting:
 		return
 	is_submitting = true
@@ -180,8 +179,8 @@ func submit_score_to_cloud(pilot_id: String, old_id: String = "") -> void:
 	status_label.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
 	
 	var payload := {
-		"pilot_id": pilot_id,
-		"old_pilot_id": old_id,
+		"user_id": current_user_id,
+		"pilot_name": current_pilot_name,
 		"survival_time": snapped(elapsed_seconds, 0.1),
 		"level": final_level_reached
 	}
@@ -206,7 +205,7 @@ func _on_change_name_clicked() -> void:
 		return
 	if OS.has_feature("web"):
 		# En navegadores móviles (iOS Safari / Android), levantar ventana nativa con teclado
-		var js_prompt := "window.prompt('Ingresa tu apodo o nombre de piloto (max 16 letras):', " + JSON.stringify(current_pilot_id) + ");"
+		var js_prompt := "window.prompt('Ingresa tu apodo o nombre de piloto (max 16 letras):', " + JSON.stringify(current_pilot_name) + ");"
 		var res = JavaScriptBridge.eval(js_prompt)
 		if res != null and str(res).strip_edges() != "":
 			apply_new_pilot_name(str(res))
@@ -221,15 +220,13 @@ func apply_new_pilot_name(input_name: String) -> void:
 	if clean_name.length() > 16:
 		clean_name = clean_name.substr(0, 16)
 		
-	if clean_name == current_pilot_id and not last_submitted_pilot_id.is_empty():
-		# Mismo nombre, no es necesario reenviar
+	if clean_name == current_pilot_name:
 		return
 		
-	var prev_id := last_submitted_pilot_id
-	current_pilot_id = clean_name
-	pilot_input.text = current_pilot_id
-	save_pilot_id(current_pilot_id)
-	submit_score_to_cloud(current_pilot_id, prev_id)
+	current_pilot_name = clean_name
+	pilot_input.text = current_pilot_name
+	save_profile()
+	submit_score_to_cloud()
 
 func _on_http_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	is_submitting = false
@@ -239,18 +236,17 @@ func _on_http_request_completed(_result: int, response_code: int, _headers: Pack
 		var json_str := body.get_string_from_utf8()
 		var data = JSON.parse_string(json_str)
 		if data is Dictionary and data.get("success", false):
-			last_submitted_pilot_id = current_pilot_id
 			var user_rank: int = int(data.get("rank", 0))
 			var top10: Array = data.get("top10", [])
 			status_label.text = "> PUNTUACION REGISTRADA (PUESTO MUNDIAL #%d)" % user_rank
 			status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
-			render_leaderboard(top10, current_pilot_id)
+			render_leaderboard(top10)
 			return
 			
 	status_label.text = "[!] Servidor no disponible temporalmente"
 	status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
 
-func render_leaderboard(top10: Array, current_user_id: String) -> void:
+func render_leaderboard(top10: Array) -> void:
 	for child in rows_container.get_children():
 		child.queue_free()
 		
@@ -264,9 +260,10 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 	for i in range(min(top10.size(), 7)):
 		var row_data = top10[i]
 		var rank_num := i + 1
-		var p_name := str(row_data.get("pilot_id", "DESCONOCIDO"))
+		var p_name := str(row_data.get("pilot_name", "DESCONOCIDO"))
 		var s_time := float(row_data.get("survival_time", 0.0))
 		var lvl := int(row_data.get("level", 1))
+		var is_me := bool(row_data.get("is_me", false))
 		
 		var mins := int(s_time) / 60
 		var secs := int(s_time) % 60
@@ -298,7 +295,6 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 		
 		var name_lbl := Label.new()
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_lbl.text = p_name
 		name_lbl.add_theme_font_size_override("font_size", 14)
 		
 		var time_lbl := Label.new()
@@ -314,7 +310,7 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 		lvl_lbl.add_theme_font_size_override("font_size", 14)
 		
 		# Destacar al usuario actual en Cian brillante neon
-		if p_name == current_user_id:
+		if is_me:
 			var cyan := Color(0.2, 0.95, 1.0)
 			rank_lbl.add_theme_color_override("font_color", cyan)
 			name_lbl.add_theme_color_override("font_color", cyan)
@@ -322,6 +318,7 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 			lvl_lbl.add_theme_color_override("font_color", cyan)
 			name_lbl.text = "> " + p_name + " (TU)"
 		else:
+			name_lbl.text = p_name
 			var muted := Color(0.75, 0.8, 0.9)
 			name_lbl.add_theme_color_override("font_color", muted)
 			time_lbl.add_theme_color_override("font_color", muted)
@@ -334,28 +331,48 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 		
 		rows_container.add_child(row_hbox)
 
-func load_pilot_id() -> String:
+func load_profile() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 		if file:
 			var content := file.get_as_text()
 			var parsed = JSON.parse_string(content)
-			if parsed is Dictionary and parsed.has("pilot_id"):
-				var id_val := str(parsed["pilot_id"]).strip_edges()
-				if not id_val.is_empty():
-					return id_val
+			if parsed is Dictionary:
+				if parsed.has("user_id"):
+					current_user_id = str(parsed["user_id"]).strip_edges()
+				if parsed.has("pilot_name"):
+					current_pilot_name = str(parsed["pilot_name"]).strip_edges()
+				elif parsed.has("pilot_id"):
+					current_pilot_name = str(parsed["pilot_id"]).strip_edges()
 	
-	# ID aleatorio por defecto
-	var default_id := "PILOTO-%04d" % (randi() % 9000 + 1000)
-	save_pilot_id(default_id)
-	return default_id
+	if current_user_id.is_empty():
+		current_user_id = generate_uuid()
+	if current_pilot_name.is_empty():
+		current_pilot_name = "PILOTO-%04d" % (randi() % 9000 + 1000)
+		
+	save_profile()
 
-func save_pilot_id(pilot_id: String) -> void:
+func save_profile() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
-		var data := {"pilot_id": pilot_id}
+		var data := {
+			"user_id": current_user_id,
+			"pilot_name": current_pilot_name
+		}
 		file.store_string(JSON.stringify(data))
+
+func generate_uuid() -> String:
+	var b := PackedByteArray()
+	for i in range(16):
+		b.append(randi() % 256)
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x" % [
+		b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]
+	]
 
 func _on_restart_pressed() -> void:
 	get_tree().paused = false
+	get_tree().reload_current_scene()
+
 	get_tree().reload_current_scene()
