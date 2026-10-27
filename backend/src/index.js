@@ -1,3 +1,12 @@
+const SECRET_SALT = "mp_cyber_core_sig_99x8172b";
+
+async function computeSha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default {
   async fetch(request, env) {
     const corsHeaders = {
@@ -16,7 +25,7 @@ export default {
     const url = new URL(request.url);
 
     try {
-      // 1. OBTENER TOP 10 MUNDIAL (Mejores puntuaciones públicas)
+      // 1. OBTENER TOP 10 MUNDIAL (Público)
       if (request.method === "GET" && (url.pathname === "/api/leaderboard" || url.pathname === "/leaderboard" || url.pathname === "/")) {
         const query = `
           SELECT pilot_name, survival_time, level, created_at 
@@ -33,7 +42,7 @@ export default {
         });
       }
 
-      // 2. REGISTRAR O ACTUALIZAR PUNTUACIÓN DE PILOTO
+      // 2. REGISTRAR O ACTUALIZAR PUNTUACIÓN DE PILOTO CON FIRMA CRIPTOGRÁFICA
       if (request.method === "POST" && (url.pathname === "/api/score" || url.pathname === "/score")) {
         let body;
         try {
@@ -45,7 +54,7 @@ export default {
           });
         }
 
-        // Validación de identidad (UUID del dispositivo)
+        // Validación de identidad (UUID)
         let user_id = String(body.user_id || "").trim();
         if (!user_id || user_id.length < 10 || user_id.length > 64) {
           return new Response(JSON.stringify({ success: false, error: "Invalid user_id" }), {
@@ -54,7 +63,6 @@ export default {
           });
         }
 
-        // Nombre de piloto cosmético / visible
         let pilot_name = String(body.pilot_name || "PILOTO-MK1").trim();
         pilot_name = pilot_name.replace(/[^a-zA-Z0-9_\-]/g, "").substring(0, 16);
         if (!pilot_name) pilot_name = "PILOTO-MK1";
@@ -69,7 +77,23 @@ export default {
           });
         }
 
-        // UPSERT SEGURO: Sólo afecta a la fila que tiene este user_id
+        // --- VERIFICACIÓN DE FIRMA CRIPTOGRÁFICA (ANTI-HACK) ---
+        const clientToken = String(body.token || "").trim().toLowerCase();
+        const timeStr = survival_time.toFixed(1);
+        const expectedRaw = `${user_id}:${timeStr}:${level}:${SECRET_SALT}`;
+        const expectedToken = await computeSha256(expectedRaw);
+
+        if (!clientToken || clientToken !== expectedToken) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Firma criptográfica inválida (Petición no autorizada)" 
+          }), {
+            status: 403,
+            headers: corsHeaders
+          });
+        }
+
+        // UPSERT SEGURO: Actualiza sólo al usuario propietario del user_id
         await env.DB.prepare(`
           INSERT INTO leaderboard (user_id, pilot_name, survival_time, level, updated_at)
           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -102,7 +126,6 @@ export default {
           LIMIT 10
         `).all();
 
-        // Marcar cuál es el usuario en el top10 de forma segura
         const sanitizedTop10 = (top10 || []).map(row => ({
           pilot_name: row.pilot_name,
           survival_time: row.survival_time,

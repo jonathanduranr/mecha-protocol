@@ -4,6 +4,7 @@ signal upgrade_selected(upgrade_id: String)
 
 const API_BASE_URL: String = "https://mecha-leaderboard.jonathanduran.workers.dev"
 const SAVE_PATH: String = "user://pilot_profile.json"
+const SECRET_SALT: String = "mp_cyber_core_sig_99x8172b"
 
 @onready var health_bar: ProgressBar = $TopBar/HealthBar
 @onready var xp_bar: ProgressBar = $TopBar/XPBar
@@ -178,11 +179,17 @@ func submit_score_to_cloud() -> void:
 	status_label.text = "> Sincronizando satelite de clasificacion..."
 	status_label.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
 	
+	var time_snapped: float = snapped(elapsed_seconds, 0.1)
+	var time_str: String = "%.1f" % time_snapped
+	var raw_sig: String = "%s:%s:%d:%s" % [current_user_id, time_str, final_level_reached, SECRET_SALT]
+	var token: String = raw_sig.sha256_text()
+	
 	var payload := {
 		"user_id": current_user_id,
 		"pilot_name": current_pilot_name,
-		"survival_time": snapped(elapsed_seconds, 0.1),
-		"level": final_level_reached
+		"survival_time": time_snapped,
+		"level": final_level_reached,
+		"token": token
 	}
 	var json_str := JSON.stringify(payload)
 	var headers := ["Content-Type: application/json"]
