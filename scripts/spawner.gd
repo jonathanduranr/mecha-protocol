@@ -3,8 +3,8 @@ extends Node2D
 @export var mecha: Node2D
 
 var elapsed_time: float = 0.0
-var squad_timer: float = 1.2
-var next_swarm_time: float = 50.0
+var squad_timer: float = 0.8
+var next_swarm_time: float = 40.0
 
 var boss_spawned_3m: bool = false
 var boss_spawned_6m: bool = false
@@ -16,29 +16,29 @@ func _physics_process(delta: float) -> void:
 	elapsed_time += delta
 	squad_timer -= delta
 	
-	# Eventos de Enjambres Periódicos (Cada ~50s)
+	# Eventos de Enjambres Periódicos (Cada ~40s)
 	if elapsed_time >= next_swarm_time:
 		trigger_swarm_event()
-		next_swarm_time = elapsed_time + randf_range(48.0, 58.0)
+		next_swarm_time = elapsed_time + randf_range(38.0, 46.0)
 	
 	# Eventos de Jefes por tiempo
 	if elapsed_time >= 180.0 and not boss_spawned_3m:
 		boss_spawned_3m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡COLOSO CENTINELA DETECTADO! ⚠️")
-		spawn_boss_with_escort(2200.0)
+		spawn_boss_with_escort(2500.0)
 		
 	if elapsed_time >= 360.0 and not boss_spawned_6m:
 		boss_spawned_6m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡TITÁN DE ASALTO MK-II DETECTADO! ⚠️")
-		spawn_boss_with_escort(4800.0)
+		spawn_boss_with_escort(5200.0)
 	
-	# Spawner de Escuadrones Tácticos por Intervalos con Respiro
+	# Spawner de Escuadrones Tácticos por Intervalos (Frecuencia duplicada)
 	if squad_timer <= 0:
 		spawn_tactical_squad()
-		# Pausa táctica entre escuadrones (se reduce gradualmente con el tiempo)
-		var pause: float = max(2.2, 4.0 - (elapsed_time * 0.008))
+		# Pausa táctica entre escuadrones más ágil y tensa
+		var pause: float = max(1.2, 2.2 - (elapsed_time * 0.005))
 		squad_timer = pause
 
 ## Selecciona y despliega una formación táctica según el minuto de juego
@@ -55,37 +55,41 @@ func spawn_tactical_squad() -> void:
 	var swarm_hp: float = 60.0 + (elapsed_time * 0.35)
 	var shooter_hp: float = 90.0 + (elapsed_time * 0.5)
 
-	# FASE 1 (0 a 1 min): Principalmente escuadrones en V y Muros de Scouts
+	# FASE 1 (0 a 1 min): Cantidad duplicada de Scouts (V, Muro y Pinza)
 	if elapsed_time < 60.0:
-		if randf() < 0.6:
-			spawn_v_formation("scout", 5, scout_hp)
-		else:
-			spawn_sweep_wall("scout", 5, scout_hp)
+		match formation_type:
+			0, 1:
+				spawn_v_formation("scout", 10, scout_hp)
+			2:
+				spawn_sweep_wall("scout", 10, scout_hp)
+			3:
+				spawn_pincer_formation("scout", 10, scout_hp)
 
-	# FASE 2 (1 a 2.5 min): Pinzas laterales, Escuadrones con Tanque y Shooters
+	# FASE 2 (1 a 2.5 min): Pinzas masivas, Escoltas pesadas dobles y Shooters
 	elif elapsed_time < 150.0:
 		match formation_type:
 			0:
-				spawn_v_formation("scout", 7, scout_hp)
+				spawn_v_formation("scout", 14, scout_hp)
 			1:
-				spawn_pincer_formation("scout", 6, scout_hp)
+				spawn_pincer_formation("scout", 12, scout_hp)
 			2:
 				spawn_escort_squad(tank_hp, scout_hp)
 			3:
 				spawn_shooter_patrol(shooter_hp, scout_hp)
 
-	# FASE 3 (2.5 min en adelante): Asaltos combinados de alta presión
+	# FASE 3 (2.5 min en adelante): Asaltos combinados de alta presión masivos
 	else:
 		match formation_type:
 			0:
 				# Escuadrón V de avispas rápidas
-				spawn_v_formation("swarm", 7, swarm_hp)
+				spawn_v_formation("swarm", 14, swarm_hp)
 			1:
-				# Pinza pesada (Tanque + Shooters)
-				spawn_pincer_formation("shooter", 4, shooter_hp)
-				spawn_pincer_formation("scout", 6, scout_hp)
+				# Pinza pesada (Tanque + Shooters + Scouts)
+				spawn_pincer_formation("shooter", 8, shooter_hp)
+				spawn_pincer_formation("scout", 12, scout_hp)
 			2:
-				spawn_sweep_wall("scout", 7, scout_hp)
+				spawn_sweep_wall("scout", 14, scout_hp)
+				spawn_specific_enemy("tank", tank_hp)
 				spawn_specific_enemy("tank", tank_hp)
 			3:
 				spawn_escort_squad(tank_hp, swarm_hp)
@@ -150,7 +154,7 @@ func spawn_sweep_wall(type_name: String, count: int, hp: float) -> void:
 		var x_pos: float = step * float(i + 1)
 		spawn_drone_at_pos(Vector2(x_pos, y_pos), type_name, hp)
 
-## 4. Patrulla con Escolta (1 Tanque blindado + escolta)
+## 4. Patrulla con Escolta (2 Tanques blindados en convoy + 8 escoltas)
 func spawn_escort_squad(tank_hp: float, escort_hp: float) -> void:
 	var v_size := get_viewport_rect().size
 	var edge := randi() % 4
@@ -162,35 +166,39 @@ func spawn_escort_squad(tank_hp: float, escort_hp: float) -> void:
 		2: base_pos = Vector2(-60.0, v_size.y * 0.5)
 		3: base_pos = Vector2(v_size.x + 60.0, v_size.y * 0.5)
 		
-	# Tanque en el centro
-	spawn_drone_at_pos(base_pos, "tank", tank_hp)
-	# 4 escoltas rodeando al tanque
-	spawn_drone_at_pos(base_pos + Vector2(35, 35), "scout", escort_hp)
-	spawn_drone_at_pos(base_pos + Vector2(-35, 35), "scout", escort_hp)
-	spawn_drone_at_pos(base_pos + Vector2(35, -35), "scout", escort_hp)
-	spawn_drone_at_pos(base_pos + Vector2(-35, -35), "scout", escort_hp)
+	# 2 Tanques en convoy
+	spawn_drone_at_pos(base_pos + Vector2(-35, 0), "tank", tank_hp)
+	spawn_drone_at_pos(base_pos + Vector2(35, 0), "tank", tank_hp)
+	
+	# 8 escoltas rodeando al convoy en círculo
+	for i in range(8):
+		var angle := i * (TAU / 8.0)
+		spawn_drone_at_pos(base_pos + Vector2(cos(angle), sin(angle)) * 68.0, "scout", escort_hp)
 
-## 5. Patrulla de Francotiradores a distancia
+## 5. Patrulla de Francotiradores a distancia (4 Shooters + 6 Scouts escudo)
 func spawn_shooter_patrol(shooter_hp: float, guard_hp: float) -> void:
 	var v_size := get_viewport_rect().size
-	var x_pos := 60.0 if randf() < 0.5 else v_size.x - 60.0
-	# 2 Tiradores entrando juntos
-	spawn_drone_at_pos(Vector2(x_pos, -50.0), "shooter", shooter_hp)
-	spawn_drone_at_pos(Vector2(x_pos + (30.0 if x_pos < 200 else -30.0), -90.0), "shooter", shooter_hp)
-	# 2 Scouts delante de escudo
-	spawn_drone_at_pos(Vector2(x_pos, -20.0), "scout", guard_hp)
+	var x_pos := 75.0 if randf() < 0.5 else v_size.x - 75.0
+	# 4 Tiradores escalonados
+	spawn_drone_at_pos(Vector2(x_pos - 35, -50.0), "shooter", shooter_hp)
+	spawn_drone_at_pos(Vector2(x_pos + 35, -50.0), "shooter", shooter_hp)
+	spawn_drone_at_pos(Vector2(x_pos - 35, -95.0), "shooter", shooter_hp)
+	spawn_drone_at_pos(Vector2(x_pos + 35, -95.0), "shooter", shooter_hp)
+	# Escuadrón de 6 Scouts frontales como escudo
+	for i in range(6):
+		spawn_drone_at_pos(Vector2(x_pos - 75 + (i * 30), -20.0), "scout", guard_hp)
 
 ## Jefe Titán con escolta de honor
 func spawn_boss_with_escort(boss_hp: float) -> void:
 	var v_size := get_viewport_rect().size
 	var spawn_pos := Vector2(v_size.x * 0.5, -80.0)
 	spawn_drone_at_pos(spawn_pos, "boss", boss_hp)
-	# Escuadra de 4 scouts de escolta
-	for i in range(4):
-		var angle := i * (TAU / 4.0)
-		spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 60.0, "scout", 80.0)
+	# Escuadra de 8 scouts de escolta
+	for i in range(8):
+		var angle := i * (TAU / 8.0)
+		spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 75.0, "scout", 90.0)
 
-## Evento Masivo de Enjambre (Cada ~50s)
+## Evento Masivo de Enjambre (Cada ~40s)
 func trigger_swarm_event() -> void:
 	if not is_instance_valid(mecha):
 		return
@@ -199,11 +207,11 @@ func trigger_swarm_event() -> void:
 	if is_ring:
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡ANILLO DE ASALTO ENTRANTE! ⚠️")
-		spawn_circle_swarm(28, "scout" if elapsed_time < 100.0 else "swarm")
+		spawn_circle_swarm(48, "scout" if elapsed_time < 100.0 else "swarm")
 	else:
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("⚠️ ¡ENJAMBRE HOSTIL MASIVO! ⚠️")
-		spawn_flank_stampede(30, "swarm" if elapsed_time > 70.0 else "scout")
+		spawn_flank_stampede(52, "swarm" if elapsed_time > 70.0 else "scout")
 
 func spawn_circle_swarm(count: int, enemy_type: String) -> void:
 	var radius: float = 460.0

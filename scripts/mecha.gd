@@ -14,7 +14,7 @@ signal mecha_destroyed(final_level: int)
 
 var current_health: float
 var current_xp: int = 0
-var xp_needed: int = 20
+var xp_needed: int = 35
 var level: int = 1
 
 var shoot_timer: float = 0.0
@@ -228,12 +228,12 @@ func gain_xp(amount: int) -> void:
 
 func calculate_xp_needed(lvl: int) -> int:
 	if lvl <= 4:
-		return 20 + (lvl * 15)
+		return 35 + (lvl * 25)
 	elif lvl <= 12:
-		return 80 + (lvl * 35)
+		return 140 + (lvl * 50)
 	else:
-		var bonus := pow(float(lvl - 10), 1.7) * 14.0
-		return int(250 + (lvl * 50) + bonus)
+		var bonus := pow(float(lvl - 10), 1.7) * 20.0
+		return int(380 + (lvl * 75) + bonus)
 
 func take_damage(amount: float) -> void:
 	if damage_cooldown > 0:
