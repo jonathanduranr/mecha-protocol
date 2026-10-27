@@ -241,7 +241,7 @@ theme_override_font_sizes/font_size = 17
 text = "PILOTO:"
 
 [node name="PilotInput" type="LineEdit" parent="GameOverPanel/CenterContainer/VBoxContainer/PilotContainer"]
-custom_minimum_size = Vector2(240, 42)
+custom_minimum_size = Vector2(230, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 17
@@ -251,12 +251,12 @@ max_length = 16
 placeholder_text = "Tu nombre"
 
 [node name="SavePilotBtn" type="Button" parent="GameOverPanel/CenterContainer/VBoxContainer/PilotContainer"]
-custom_minimum_size = Vector2(90, 42)
+custom_minimum_size = Vector2(115, 44)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_save")
-text = "ACTUALIZAR"
+text = "✏️ CAMBIAR"
 
 [node name="StatusLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
 layout_mode = 2

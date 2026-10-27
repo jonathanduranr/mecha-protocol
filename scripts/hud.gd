@@ -70,8 +70,9 @@ func _ready() -> void:
 	upgrade_panel.visible = false
 	game_over_panel.visible = false
 	restart_button.pressed.connect(_on_restart_pressed)
-	save_pilot_btn.pressed.connect(_on_save_pilot_pressed)
-	pilot_input.text_submitted.connect(func(_new_text): _on_save_pilot_pressed())
+	save_pilot_btn.pressed.connect(_on_change_name_clicked)
+	pilot_input.gui_input.connect(_on_pilot_input_gui_input)
+	pilot_input.text_submitted.connect(func(text_val): apply_new_pilot_name(text_val))
 	
 	http_request.request_completed.connect(_on_http_request_completed)
 	current_pilot_id = load_pilot_id()
@@ -185,15 +186,30 @@ func submit_score_to_cloud(pilot_id: String) -> void:
 		status_label.text = "⚠️ Red desconectada (Jugando local)"
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))
 
-func _on_save_pilot_pressed() -> void:
-	var new_name := pilot_input.text.strip_edges()
-	if new_name.is_empty():
+func _on_pilot_input_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if OS.has_feature("web"):
+			_on_change_name_clicked()
+
+func _on_change_name_clicked() -> void:
+	if OS.has_feature("web"):
+		# En navegadores móviles (iOS Safari / Android), levantar ventana nativa con teclado
+		var js_prompt := "window.prompt('Ingresa tu apodo o nombre de piloto (máx 16 letras):', " + JSON.stringify(current_pilot_id) + ");"
+		var res = JavaScriptBridge.eval(js_prompt)
+		if res != null and str(res).strip_edges() != "":
+			apply_new_pilot_name(str(res))
+	else:
+		# En PC / Editor
+		apply_new_pilot_name(pilot_input.text)
+
+func apply_new_pilot_name(input_name: String) -> void:
+	var clean_name := input_name.strip_edges().replace(" ", "_").to_upper()
+	if clean_name.is_empty():
 		return
-	new_name = new_name.replace(" ", "_").to_upper()
-	if new_name.length() > 16:
-		new_name = new_name.substr(0, 16)
+	if clean_name.length() > 16:
+		clean_name = clean_name.substr(0, 16)
 		
-	current_pilot_id = new_name
+	current_pilot_id = clean_name
 	pilot_input.text = current_pilot_id
 	save_pilot_id(current_pilot_id)
 	submit_score_to_cloud(current_pilot_id)
