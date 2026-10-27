@@ -243,7 +243,7 @@ func _on_http_request_completed(_result: int, response_code: int, _headers: Pack
 			render_leaderboard(top10)
 			return
 			
-	status_label.text = "[!] Servidor no disponible temporalmente"
+	status_label.text = "[!] Servidor no disponible (HTTP %d, res %d)" % [response_code, _result]
 	status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
 
 func render_leaderboard(top10: Array) -> void:
