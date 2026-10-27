@@ -22,6 +22,14 @@ const SECRET_SALT: String = "mp_cyber_core_sig_99x8172b"
 @onready var save_pilot_btn: Button = $GameOverPanel/CenterContainer/VBoxContainer/PilotContainer/SavePilotBtn
 @onready var status_label: Label = $GameOverPanel/CenterContainer/VBoxContainer/StatusLabel
 @onready var rows_container: VBoxContainer = $GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/RowsContainer
+
+@onready var start_panel: Control = $StartPanel
+@onready var start_pilot_input: LineEdit = $StartPanel/CenterContainer/VBoxContainer/PilotContainer/StartPilotInput
+@onready var start_change_btn: Button = $StartPanel/CenterContainer/VBoxContainer/PilotContainer/StartChangeBtn
+@onready var start_status_label: Label = $StartPanel/CenterContainer/VBoxContainer/StartStatusLabel
+@onready var start_rows_container: VBoxContainer = $StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/StartRowsContainer
+@onready var start_button: Button = $StartPanel/CenterContainer/VBoxContainer/StartButton
+
 @onready var http_request: HTTPRequest = $LeaderboardHTTP
 
 var elapsed_seconds: float = 0.0
@@ -70,8 +78,16 @@ var archetype_upgrades := [
 ]
 
 func _ready() -> void:
+	get_tree().paused = true
+	start_panel.visible = true
 	upgrade_panel.visible = false
 	game_over_panel.visible = false
+	
+	start_button.pressed.connect(_on_start_protocol_pressed)
+	start_change_btn.pressed.connect(_on_change_name_clicked)
+	start_pilot_input.gui_input.connect(_on_pilot_input_gui_input)
+	start_pilot_input.text_submitted.connect(func(text_val): apply_new_pilot_name(text_val))
+	
 	restart_button.pressed.connect(_on_restart_pressed)
 	save_pilot_btn.pressed.connect(_on_change_name_clicked)
 	pilot_input.gui_input.connect(_on_pilot_input_gui_input)
@@ -80,6 +96,23 @@ func _ready() -> void:
 	http_request.request_completed.connect(_on_http_request_completed)
 	load_profile()
 	pilot_input.text = current_pilot_name
+	start_pilot_input.text = current_pilot_name
+	
+	fetch_initial_leaderboard()
+
+func _on_start_protocol_pressed() -> void:
+	start_panel.visible = false
+	get_tree().paused = false
+
+func fetch_initial_leaderboard() -> void:
+	start_status_label.text = "> Consultando satelite de clasificacion..."
+	start_status_label.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
+	var url := API_BASE_URL + "/api/leaderboard?user_id=" + current_user_id
+	http_request.cancel_request()
+	var err := http_request.request(url, ["Accept: application/json"], HTTPClient.METHOD_GET)
+	if err != OK:
+		start_status_label.text = "[!] Red desconectada (Sin conexion)"
+		start_status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))
 
 func _process(delta: float) -> void:
 	if not get_tree().paused:
@@ -232,36 +265,58 @@ func apply_new_pilot_name(input_name: String) -> void:
 		
 	current_pilot_name = clean_name
 	pilot_input.text = current_pilot_name
+	start_pilot_input.text = current_pilot_name
 	save_profile()
-	submit_score_to_cloud()
+	
+	if game_over_panel.visible:
+		submit_score_to_cloud()
+	else:
+		fetch_initial_leaderboard()
 
 func _on_http_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	is_submitting = false
 	save_pilot_btn.disabled = false
+	start_change_btn.disabled = false
 	
 	if response_code == 200:
 		var json_str := body.get_string_from_utf8()
 		var data = JSON.parse_string(json_str)
 		if data is Dictionary and data.get("success", false):
-			var user_rank: int = int(data.get("rank", 0))
-			var top10: Array = data.get("top10", [])
-			status_label.text = "> PUNTUACION REGISTRADA (PUESTO MUNDIAL #%d)" % user_rank
-			status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
-			render_leaderboard(top10)
+			var rows: Array = []
+			if data.has("leaderboard"):
+				rows = data.get("leaderboard", [])
+				start_status_label.text = "> Satelite sincronizado. Selecciona iniciar."
+				start_status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
+			elif data.has("top10"):
+				rows = data.get("top10", [])
+				var user_rank: int = int(data.get("rank", 0))
+				status_label.text = "> PUNTUACION REGISTRADA (PUESTO MUNDIAL #%d)" % user_rank
+				status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
+				
+			render_leaderboard(rows)
 			return
 			
 	status_label.text = "[!] Servidor no disponible (HTTP %d, res %d)" % [response_code, _result]
 	status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
+	start_status_label.text = "[!] Servidor no disponible (HTTP %d)" % response_code
+	start_status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
 
 func render_leaderboard(top10: Array) -> void:
-	for child in rows_container.get_children():
+	populate_board_container(rows_container, top10)
+	populate_board_container(start_rows_container, top10)
+
+func populate_board_container(target_container: VBoxContainer, top10: Array) -> void:
+	if not is_instance_valid(target_container):
+		return
+		
+	for child in target_container.get_children():
 		child.queue_free()
 		
 	if top10.is_empty():
 		var empty_label := Label.new()
 		empty_label.text = "Sin registros aun. Eres el primero!"
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		rows_container.add_child(empty_label)
+		target_container.add_child(empty_label)
 		return
 		
 	for i in range(min(top10.size(), 7)):
@@ -316,7 +371,6 @@ func render_leaderboard(top10: Array) -> void:
 		lvl_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		lvl_lbl.add_theme_font_size_override("font_size", 14)
 		
-		# Destacar al usuario actual en Cian brillante neon
 		if is_me:
 			var cyan := Color(0.2, 0.95, 1.0)
 			rank_lbl.add_theme_color_override("font_color", cyan)
@@ -336,7 +390,7 @@ func render_leaderboard(top10: Array) -> void:
 		row_hbox.add_child(time_lbl)
 		row_hbox.add_child(lvl_lbl)
 		
-		rows_container.add_child(row_hbox)
+		target_container.add_child(row_hbox)
 
 func load_profile() -> void:
 	if FileAccess.file_exists(SAVE_PATH):

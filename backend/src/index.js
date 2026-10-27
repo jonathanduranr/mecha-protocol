@@ -25,18 +25,25 @@ export default {
     const url = new URL(request.url);
 
     try {
-      // 1. OBTENER TOP 10 MUNDIAL (Público)
+      // 1. OBTENER TOP 10 MUNDIAL (Público con soporte para resaltar al usuario)
       if (request.method === "GET" && (url.pathname === "/api/leaderboard" || url.pathname === "/leaderboard" || url.pathname === "/")) {
+        const userId = url.searchParams.get("user_id") || "";
         const query = `
-          SELECT pilot_name, survival_time, level, created_at 
+          SELECT user_id, pilot_name, survival_time, level, created_at 
           FROM leaderboard 
           ORDER BY survival_time DESC 
           LIMIT 10
         `;
         const { results } = await env.DB.prepare(query).all();
+        const sanitized = (results || []).map(row => ({
+          pilot_name: row.pilot_name,
+          survival_time: row.survival_time,
+          level: row.level,
+          is_me: Boolean(userId && row.user_id === userId)
+        }));
         return new Response(JSON.stringify({ 
           success: true, 
-          leaderboard: results || [] 
+          leaderboard: sanitized 
         }), {
           headers: corsHeaders
         });
