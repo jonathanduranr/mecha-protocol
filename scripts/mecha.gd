@@ -65,8 +65,11 @@ func _physics_process(delta: float) -> void:
 			fire_weapons(aim_dir)
 			shoot_timer = fire_rate
 	else:
-		if current_velocity.length_squared() > 400.0:
+		if current_velocity.length_squared() > 900.0:
 			rotation = lerp_angle(rotation, current_velocity.angle(), 8.0 * delta)
+		else:
+			# Escaneo de radar / centinela: rota lentamente buscando objetivos sin temblar
+			rotation += 1.3 * delta
 
 	# 3. IMÁN DE CHATARRA
 	check_scrap_magnet()
@@ -142,10 +145,12 @@ func calculate_steering_direction() -> Vector2:
 	var center_force := Vector2.ZERO
 	var dist_to_center := global_position.distance_to(center)
 	
-	if dist_to_center > 80.0:
+	if dist_to_center > 30.0:
 		# Cuanto más lejos del centro esté, más deseo tiene de volver al corazón seguro de la arena
 		var center_weight: float = 1.0 if enemy_count_in_danger == 0 else 0.4
-		center_force = (center - global_position).normalized() * (dist_to_center / 350.0) * center_weight
+		# Desaceleración suave (ease-out) al aproximarse al centro para evitar sobrepasar y temblar
+		var speed_factor: float = clamp((dist_to_center - 30.0) / 160.0, 0.0, 1.0)
+		center_force = (center - global_position).normalized() * speed_factor * center_weight
 
 	# 4. Repulsión de bordes de la pantalla
 	var boundary_margin: float = 55.0
@@ -167,11 +172,13 @@ func calculate_steering_direction() -> Vector2:
 	# Suma ponderada de fuerzas
 	var total_vector: Vector2 = (avoidance_force * 2.0) + scrap_force + boundary_force + (center_force * 1.4)
 	
-	# Si no hay estímulos, vuelve directo al centro
-	if total_vector.length_squared() < 0.05:
-		total_vector = (center - global_position).normalized() * 0.6
+	# Si está en el centro sin enemigos ni chatarra de peligro, frenado absoluto (deadband limpio)
+	if avoidance_force.length_squared() < 0.01 and scrap_force.length_squared() < 0.01 and dist_to_center <= 30.0:
+		return Vector2.ZERO
 		
-	return total_vector.normalized()
+	if total_vector.length() > 1.0:
+		return total_vector.normalized()
+	return total_vector
 
 func get_closest_enemy() -> Node2D:
 	var enemies := get_tree().get_nodes_in_group("enemies")
