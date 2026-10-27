@@ -1,0 +1,8 @@
+name = "mecha-leaderboard"
+main = "src/index.js"
+compatibility_date = "2024-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mecha-leaderboard"
+database_id = "be8c2bc3-5791-4fa9-832a-551c274a25ad"

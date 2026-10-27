@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
 
@@ -25,6 +25,48 @@ border_width_bottom = 2
 border_color = Color(1, 0.25, 0.35, 1)
 corner_radius_top_left = 8
 corner_radius_bottom_right = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input"]
+bg_color = Color(0.06, 0.09, 0.15, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.8, 1, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_right = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_save"]
+bg_color = Color(0.1, 0.2, 0.32, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.8, 1, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_board"]
+bg_color = Color(0.03, 0.05, 0.08, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.45, 0.6, 0.5)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
 
 [node name="HUD" type="CanvasLayer"]
 process_mode = 3
@@ -152,7 +194,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.04, 0.02, 0.03, 0.95)
+color = Color(0.03, 0.02, 0.04, 0.97)
 
 [node name="CenterContainer" type="CenterContainer" parent="GameOverPanel"]
 layout_mode = 1
@@ -164,36 +206,121 @@ grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="GameOverPanel/CenterContainer"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 
 [node name="TitleLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.2, 0.3, 1)
-theme_override_font_sizes/font_size = 38
-text = "SISTEMA CRÍTICO"
+theme_override_colors/font_color = Color(1, 0.2, 0.35, 1)
+theme_override_font_sizes/font_size = 34
+text = "💀 SISTEMA CRÍTICO"
 horizontal_alignment = 1
 
 [node name="SubTitleLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 17
 text = "MECHA DESTRUIDO EN COMBATE"
 horizontal_alignment = 1
 
 [node name="StatsLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 22
-text = "TIEMPO: 00:00\nNIVEL ALCANZADO: 1"
+theme_override_font_sizes/font_size = 20
+text = "TIEMPO: 00:00  |  NIVEL: 1"
 horizontal_alignment = 1
 
-[node name="Spacer" type="Control" parent="GameOverPanel/CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 15)
+[node name="PilotContainer" type="HBoxContainer" parent="GameOverPanel/CenterContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="PilotTagLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer/PilotContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 17
+text = "PILOTO:"
+
+[node name="PilotInput" type="LineEdit" parent="GameOverPanel/CenterContainer/VBoxContainer/PilotContainer"]
+custom_minimum_size = Vector2(240, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_input")
+text = "PILOTO-0001"
+max_length = 16
+placeholder_text = "Tu nombre"
+
+[node name="SavePilotBtn" type="Button" parent="GameOverPanel/CenterContainer/VBoxContainer/PilotContainer"]
+custom_minimum_size = Vector2(90, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_save")
+text = "ACTUALIZAR"
+
+[node name="StatusLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "📡 Sincronizando satélite..."
+horizontal_alignment = 1
+
+[node name="LeaderboardPanel" type="PanelContainer" parent="GameOverPanel/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(580, 270)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_board")
+
+[node name="BoardVBox" type="VBoxContainer" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BoardHeader" type="HBoxContainer" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox"]
 layout_mode = 2
 
-[node name="RestartButton" type="Button" parent="GameOverPanel/CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(480, 85)
+[node name="H_Rank" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
+custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "RANG"
+
+[node name="H_Name" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "PILOTO"
+
+[node name="H_Time" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "TIEMPO"
+horizontal_alignment = 1
+
+[node name="H_Level" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "NIVEL"
+horizontal_alignment = 2
+
+[node name="HSeparator" type="HSeparator" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox"]
+layout_mode = 2
+
+[node name="RowsContainer" type="VBoxContainer" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="RestartButton" type="Button" parent="GameOverPanel/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(500, 68)
+layout_mode = 2
+size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "🔄 REINICIAR PROTOCOLO"
+
+[node name="LeaderboardHTTP" type="HTTPRequest" parent="."]
+timeout = 8.0
