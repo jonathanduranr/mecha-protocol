@@ -130,12 +130,24 @@ func calculate_steering_direction() -> Vector2:
 			var weight_b: float = (1.0 - (dist_b / 130.0)) * 3.0
 			avoidance_force += push_b * weight_b
 			
+	# 2. Atracción hacia el Scrap/XP más cercano (si no hay peligro extremo)
 	if enemy_count_in_danger < 4:
 		var closest_scrap := get_closest_scrap()
 		if is_instance_valid(closest_scrap):
 			scrap_force = (closest_scrap.global_position - global_position).normalized() * 1.8
 			
+	# 3. Retorno instintivo al CENTRO TÁCTICO de la arena (cuando el camino está despejado)
 	var viewport_size := get_viewport_rect().size
+	var center := viewport_size * 0.5
+	var center_force := Vector2.ZERO
+	var dist_to_center := global_position.distance_to(center)
+	
+	if dist_to_center > 80.0:
+		# Cuanto más lejos del centro esté, más deseo tiene de volver al corazón seguro de la arena
+		var center_weight: float = 1.0 if enemy_count_in_danger == 0 else 0.4
+		center_force = (center - global_position).normalized() * (dist_to_center / 350.0) * center_weight
+
+	# 4. Repulsión de bordes de la pantalla
 	var boundary_margin: float = 55.0
 	
 	if global_position.x < boundary_margin:
@@ -152,11 +164,12 @@ func calculate_steering_direction() -> Vector2:
 		var factor := (global_position.y - (viewport_size.y - boundary_margin)) / boundary_margin
 		boundary_force.y -= factor * 2.0
 
-	var total_vector: Vector2 = (avoidance_force * 1.8) + scrap_force + boundary_force
+	# Suma ponderada de fuerzas
+	var total_vector: Vector2 = (avoidance_force * 2.0) + scrap_force + boundary_force + (center_force * 1.4)
 	
+	# Si no hay estímulos, vuelve directo al centro
 	if total_vector.length_squared() < 0.05:
-		var wander_angle := sin(Time.get_ticks_msec() * 0.0015) * PI
-		total_vector = Vector2.UP.rotated(wander_angle) * 0.5
+		total_vector = (center - global_position).normalized() * 0.6
 		
 	return total_vector.normalized()
 
