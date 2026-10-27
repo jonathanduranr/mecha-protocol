@@ -145,7 +145,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(1, 0.25, 0.35, 1)
 theme_override_font_sizes/font_size = 26
-text = "⚠️ ALERTA: ENJAMBRE HOSTIL ⚠️"
+text = "[!] ALERTA: ENJAMBRE HOSTIL [!]"
 horizontal_alignment = 1
 
 [node name="UpgradePanel" type="ColorRect" parent="."]
@@ -211,8 +211,8 @@ theme_override_constants/separation = 14
 [node name="TitleLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.2, 0.35, 1)
-theme_override_font_sizes/font_size = 34
-text = "💀 SISTEMA CRÍTICO"
+theme_override_font_sizes/font_size = 32
+text = "// SISTEMA CRÍTICO //"
 horizontal_alignment = 1
 
 [node name="SubTitleLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
@@ -256,13 +256,13 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_save")
-text = "✏️ CAMBIAR"
+text = "[ CAMBIAR ]"
 
 [node name="StatusLabel" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.5, 0.8, 0.9, 1)
 theme_override_font_sizes/font_size = 14
-text = "📡 Sincronizando satélite..."
+text = "> Sincronizando satélite..."
 horizontal_alignment = 1
 
 [node name="LeaderboardPanel" type="PanelContainer" parent="GameOverPanel/CenterContainer/VBoxContainer"]
@@ -278,11 +278,11 @@ theme_override_constants/separation = 4
 layout_mode = 2
 
 [node name="H_Rank" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
-custom_minimum_size = Vector2(60, 0)
+custom_minimum_size = Vector2(65, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 14
-text = "RANG"
+text = "RANGO"
 
 [node name="H_Name" type="Label" parent="GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
 layout_mode = 2
@@ -320,7 +320,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_font_sizes/font_size = 20
-text = "🔄 REINICIAR PROTOCOLO"
+text = "[ REINICIAR PROTOCOLO ]"
 
 [node name="LeaderboardHTTP" type="HTTPRequest" parent="."]
 timeout = 8.0

@@ -25,13 +25,13 @@ func _physics_process(delta: float) -> void:
 	if elapsed_time >= 180.0 and not boss_spawned_3m:
 		boss_spawned_3m = true
 		if hud and hud.has_method("show_alert"):
-			hud.show_alert("⚠️ ¡COLOSO CENTINELA DETECTADO! ⚠️")
+			hud.show_alert("[!] COLOSO CENTINELA DETECTADO [!]")
 		spawn_boss_with_escort(2500.0)
 		
 	if elapsed_time >= 360.0 and not boss_spawned_6m:
 		boss_spawned_6m = true
 		if hud and hud.has_method("show_alert"):
-			hud.show_alert("⚠️ ¡TITÁN DE ASALTO MK-II DETECTADO! ⚠️")
+			hud.show_alert("[!] TITAN DE ASALTO MK-II DETECTADO [!]")
 		spawn_boss_with_escort(5200.0)
 	
 	# Spawner de Escuadrones Tácticos por Intervalos (Frecuencia duplicada)
@@ -206,11 +206,11 @@ func trigger_swarm_event() -> void:
 	var is_ring := randf() < 0.5
 	if is_ring:
 		if hud and hud.has_method("show_alert"):
-			hud.show_alert("⚠️ ¡ANILLO DE ASALTO ENTRANTE! ⚠️")
+			hud.show_alert("[!] ANILLO DE ASALTO ENTRANTE [!]")
 		spawn_circle_swarm(48, "scout" if elapsed_time < 100.0 else "swarm")
 	else:
 		if hud and hud.has_method("show_alert"):
-			hud.show_alert("⚠️ ¡ENJAMBRE HOSTIL MASIVO! ⚠️")
+			hud.show_alert("[!] ENJAMBRE HOSTIL MASIVO [!]")
 		spawn_flank_stampede(52, "swarm" if elapsed_time > 70.0 else "scout")
 
 func spawn_circle_swarm(count: int, enemy_type: String) -> void:

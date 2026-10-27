@@ -14,7 +14,7 @@ export default {
     const url = new URL(request.url);
 
     try {
-      // 1. OBTENER TOP 10
+      // 1. OBTENER TOP 10 MUNDIAL (Mejor récord por cada piloto)
       if (request.method === "GET" && (url.pathname === "/api/leaderboard" || url.pathname === "/leaderboard" || url.pathname === "/")) {
         const query = `
           SELECT pilot_id, survival_time, level, created_at 
@@ -31,7 +31,7 @@ export default {
         });
       }
 
-      // 2. REGISTRAR PUNTUACIÓN DE PARTIDA
+      // 2. REGISTRAR O ACTUALIZAR PUNTUACIÓN DE PILOTO (UPSERT)
       if (request.method === "POST" && (url.pathname === "/api/score" || url.pathname === "/score")) {
         let body;
         try {
@@ -47,6 +47,8 @@ export default {
         pilot_id = pilot_id.replace(/[^a-zA-Z0-9_\-]/g, "").substring(0, 16);
         if (!pilot_id) pilot_id = "PILOTO-MK1";
 
+        let old_pilot_id = body.old_pilot_id ? String(body.old_pilot_id).trim() : null;
+
         const survival_time = parseFloat(body.survival_time) || 0.0;
         const level = parseInt(body.level, 10) || 1;
 
@@ -57,15 +59,34 @@ export default {
           });
         }
 
-        // Insertar registro
-        await env.DB.prepare(
-          "INSERT INTO leaderboard (pilot_id, survival_time, level) VALUES (?, ?, ?)"
-        ).bind(pilot_id, survival_time, level).run();
+        // Si cambió de apodo en la misma sesión, limpiar el nombre anterior
+        if (old_pilot_id && old_pilot_id !== pilot_id) {
+          await env.DB.prepare("DELETE FROM leaderboard WHERE pilot_id = ?").bind(old_pilot_id).run();
+        }
 
-        // Calcular posición en el ranking mundial
+        // UPSERT: 1 entrada única por piloto con su récord máximo
+        await env.DB.prepare(`
+          INSERT INTO leaderboard (pilot_id, survival_time, level, created_at)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(pilot_id) DO UPDATE SET
+            survival_time = CASE 
+              WHEN excluded.survival_time > leaderboard.survival_time THEN excluded.survival_time 
+              ELSE leaderboard.survival_time 
+            END,
+            level = CASE 
+              WHEN excluded.survival_time > leaderboard.survival_time THEN excluded.level 
+              ELSE leaderboard.level 
+            END,
+            created_at = CASE 
+              WHEN excluded.survival_time > leaderboard.survival_time THEN CURRENT_TIMESTAMP 
+              ELSE leaderboard.created_at 
+            END
+        `).bind(pilot_id, survival_time, level).run();
+
+        // Calcular posición actual del piloto en el ranking mundial
         const rankResult = await env.DB.prepare(
-          "SELECT COUNT(*) as better_count FROM leaderboard WHERE survival_time > ?"
-        ).bind(survival_time).first();
+          "SELECT COUNT(*) as better_count FROM leaderboard WHERE survival_time > (SELECT survival_time FROM leaderboard WHERE pilot_id = ?)"
+        ).bind(pilot_id).first();
         const rank = (rankResult?.better_count || 0) + 1;
 
         // Traer Top 10 actualizado

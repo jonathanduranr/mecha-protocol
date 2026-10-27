@@ -26,6 +26,8 @@ const SAVE_PATH: String = "user://pilot_profile.json"
 var elapsed_seconds: float = 0.0
 var final_level_reached: int = 1
 var current_pilot_id: String = ""
+var last_submitted_pilot_id: String = ""
+var is_submitting: bool = false
 
 var archetype_upgrades := [
 	{
@@ -159,31 +161,39 @@ func show_game_over(final_level: int) -> void:
 	
 	var minutes := int(elapsed_seconds) / 60
 	var seconds := int(elapsed_seconds) % 60
-	game_over_stats.text = "⏱️ TIEMPO: %02d:%02d   |   ⭐ NIVEL: %d" % [minutes, seconds, final_level]
+	game_over_stats.text = "TIEMPO: %02d:%02d   |   NIVEL: %d" % [minutes, seconds, final_level]
 	
 	current_pilot_id = load_pilot_id()
+	last_submitted_pilot_id = current_pilot_id
 	pilot_input.text = current_pilot_id
 	
 	game_over_panel.visible = true
 	submit_score_to_cloud(current_pilot_id)
 
-func submit_score_to_cloud(pilot_id: String) -> void:
-	status_label.text = "📡 Sincronizando con satélite de clasificación..."
+func submit_score_to_cloud(pilot_id: String, old_id: String = "") -> void:
+	if is_submitting:
+		return
+	is_submitting = true
+	save_pilot_btn.disabled = true
+	
+	status_label.text = "> Sincronizando satelite de clasificacion..."
 	status_label.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
 	
 	var payload := {
 		"pilot_id": pilot_id,
+		"old_pilot_id": old_id,
 		"survival_time": snapped(elapsed_seconds, 0.1),
 		"level": final_level_reached
 	}
 	var json_str := JSON.stringify(payload)
 	var headers := ["Content-Type: application/json"]
 	
-	# Cancelar peticiones pendientes si las hubiera
 	http_request.cancel_request()
 	var err := http_request.request(API_BASE_URL + "/api/score", headers, HTTPClient.METHOD_POST, json_str)
 	if err != OK:
-		status_label.text = "⚠️ Red desconectada (Jugando local)"
+		is_submitting = false
+		save_pilot_btn.disabled = false
+		status_label.text = "[!] Red desconectada (Jugando local)"
 		status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))
 
 func _on_pilot_input_gui_input(event: InputEvent) -> void:
@@ -192,9 +202,11 @@ func _on_pilot_input_gui_input(event: InputEvent) -> void:
 			_on_change_name_clicked()
 
 func _on_change_name_clicked() -> void:
+	if is_submitting:
+		return
 	if OS.has_feature("web"):
 		# En navegadores móviles (iOS Safari / Android), levantar ventana nativa con teclado
-		var js_prompt := "window.prompt('Ingresa tu apodo o nombre de piloto (máx 16 letras):', " + JSON.stringify(current_pilot_id) + ");"
+		var js_prompt := "window.prompt('Ingresa tu apodo o nombre de piloto (max 16 letras):', " + JSON.stringify(current_pilot_id) + ");"
 		var res = JavaScriptBridge.eval(js_prompt)
 		if res != null and str(res).strip_edges() != "":
 			apply_new_pilot_name(str(res))
@@ -209,24 +221,33 @@ func apply_new_pilot_name(input_name: String) -> void:
 	if clean_name.length() > 16:
 		clean_name = clean_name.substr(0, 16)
 		
+	if clean_name == current_pilot_id and not last_submitted_pilot_id.is_empty():
+		# Mismo nombre, no es necesario reenviar
+		return
+		
+	var prev_id := last_submitted_pilot_id
 	current_pilot_id = clean_name
 	pilot_input.text = current_pilot_id
 	save_pilot_id(current_pilot_id)
-	submit_score_to_cloud(current_pilot_id)
+	submit_score_to_cloud(current_pilot_id, prev_id)
 
 func _on_http_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	is_submitting = false
+	save_pilot_btn.disabled = false
+	
 	if response_code == 200:
 		var json_str := body.get_string_from_utf8()
 		var data = JSON.parse_string(json_str)
 		if data is Dictionary and data.get("success", false):
+			last_submitted_pilot_id = current_pilot_id
 			var user_rank: int = int(data.get("rank", 0))
 			var top10: Array = data.get("top10", [])
-			status_label.text = "✅ PUNTUACIÓN REGISTRADA (PUESTO MUNDIAL #%d)" % user_rank
+			status_label.text = "> PUNTUACION REGISTRADA (PUESTO MUNDIAL #%d)" % user_rank
 			status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
 			render_leaderboard(top10, current_pilot_id)
 			return
 			
-	status_label.text = "⚠️ Servidor no disponible temporalmente"
+	status_label.text = "[!] Servidor no disponible temporalmente"
 	status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
 
 func render_leaderboard(top10: Array, current_user_id: String) -> void:
@@ -235,7 +256,7 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 		
 	if top10.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = "Sin registros aún. ¡Eres el primero!"
+		empty_label.text = "Sin registros aun. Eres el primero!"
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rows_container.add_child(empty_label)
 		return
@@ -255,14 +276,25 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 		row_hbox.custom_minimum_size = Vector2(0, 24)
 		
 		var rank_lbl := Label.new()
-		rank_lbl.custom_minimum_size = Vector2(50, 0)
+		rank_lbl.custom_minimum_size = Vector2(55, 0)
 		var rank_text := ""
-		if rank_num == 1: rank_text = "🥇 1."
-		elif rank_num == 2: rank_text = "🥈 2."
-		elif rank_num == 3: rank_text = "🥉 3."
-		else: rank_text = "   %d." % rank_num
+		var rank_color := Color(0.65, 0.72, 0.82)
+		
+		if rank_num == 1:
+			rank_text = "#1"
+			rank_color = Color(1.0, 0.85, 0.2)
+		elif rank_num == 2:
+			rank_text = "#2"
+			rank_color = Color(0.85, 0.9, 0.98)
+		elif rank_num == 3:
+			rank_text = "#3"
+			rank_color = Color(1.0, 0.62, 0.35)
+		else:
+			rank_text = " %d." % rank_num
+			
 		rank_lbl.text = rank_text
 		rank_lbl.add_theme_font_size_override("font_size", 14)
+		rank_lbl.add_theme_color_override("font_color", rank_color)
 		
 		var name_lbl := Label.new()
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -281,17 +313,16 @@ func render_leaderboard(top10: Array, current_user_id: String) -> void:
 		lvl_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		lvl_lbl.add_theme_font_size_override("font_size", 14)
 		
-		# Destacar al usuario actual en Cian brillante
+		# Destacar al usuario actual en Cian brillante neon
 		if p_name == current_user_id:
 			var cyan := Color(0.2, 0.95, 1.0)
 			rank_lbl.add_theme_color_override("font_color", cyan)
 			name_lbl.add_theme_color_override("font_color", cyan)
 			time_lbl.add_theme_color_override("font_color", cyan)
 			lvl_lbl.add_theme_color_override("font_color", cyan)
-			name_lbl.text = "▶ " + p_name + " (TÚ)"
+			name_lbl.text = "> " + p_name + " (TU)"
 		else:
 			var muted := Color(0.75, 0.8, 0.9)
-			rank_lbl.add_theme_color_override("font_color", muted)
 			name_lbl.add_theme_color_override("font_color", muted)
 			time_lbl.add_theme_color_override("font_color", muted)
 			lvl_lbl.add_theme_color_override("font_color", muted)
