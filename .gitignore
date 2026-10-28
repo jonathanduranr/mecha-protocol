@@ -13,3 +13,12 @@ mono_crash.*.json
 # System files
 .DS_Store
 *.tmp
+
+# iOS Build Artifacts
+builds/ios/build/
+builds/ios/*.ipa
+builds/ios/*.pck
+builds/ios/*.xcarchive
+builds/ios/*.xcframework
+builds/ios/MechaProtocol/
+builds/ios/MechaProtocol.xcodeproj/

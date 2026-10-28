@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>teamID</key>
+    <string>PZG7Z85XW6</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>Apple Distribution: Jonathan Duran Reyes (PZG7Z85XW6)</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.jonathanduran.mechaprotocol</key>
+        <string>a39ea11d-c8d1-4f6a-b105-805777183c08</string>
+    </dict>
+    <key>destination</key>
+    <string>upload</string>
+    <key>uploadSymbols</key>
+    <false/>
+</dict>
+</plist>
