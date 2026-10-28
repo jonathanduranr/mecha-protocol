@@ -309,6 +309,16 @@ func apply_new_pilot_name(input_name: String) -> void:
 	if clean_name.length() > 16:
 		clean_name = clean_name.substr(0, 16)
 		
+	# Filtro preventivo en cliente (anti-leetspeak)
+	var normalized := clean_name.to_lower().replace("3", "e").replace("1", "i").replace("0", "o").replace("4", "a").replace("5", "s").replace("7", "t").replace("8", "b").replace("_", "").replace("-", "")
+	var banned_roots := ["pene", "verga", "pico", "pito", "porno", "puta", "puto", "concha", "culiao", "weon", "chucha", "nazi", "hitler", "dick", "cock", "pussy", "teta", "xvideo"]
+	for b in banned_roots:
+		if normalized.contains(b):
+			status_label.text = "[!] Nombre no permitido por moderación."
+			status_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+			pilot_input.text = current_pilot_name
+			return
+		
 	if clean_name == current_pilot_name:
 		return
 		
@@ -326,39 +336,44 @@ func _on_http_request_completed(_result: int, response_code: int, _headers: Pack
 	is_submitting = false
 	save_pilot_btn.disabled = false
 	
-	if response_code == 200:
-		var json_str := body.get_string_from_utf8()
-		var data = JSON.parse_string(json_str)
-		if data is Dictionary and data.get("success", false):
-			var rows: Array = []
-			if data.has("leaderboard"):
-				rows = data.get("leaderboard", [])
-				if data.has("user_record") and data["user_record"] is Dictionary:
-					var u_rec: Dictionary = data["user_record"]
-					var u_time := float(u_rec.get("survival_time", 0.0))
-					var u_lvl := int(u_rec.get("level", 1))
-					var u_rank := int(u_rec.get("rank", 0))
-					if u_time > best_survival_time:
-						best_survival_time = u_time
-						best_level = u_lvl
-						save_profile()
-					var mins := int(best_survival_time) / 60
-					var secs := int(best_survival_time) % 60
-					if u_rank > 0:
-						personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d) - PUESTO #%d" % [mins, secs, best_level, u_rank]
-					else:
-						personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d)  |  PILOTO: %s" % [mins, secs, best_level, current_pilot_name]
-			elif data.has("top10"):
-				rows = data.get("top10", [])
-				var user_rank: int = int(data.get("rank", 0))
-				status_label.text = "> PUNTUACION REGISTRADA (PUESTO MUNDIAL #%d)" % user_rank
-				status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
-				
-			render_leaderboard(rows)
-			return
+	var json_str := body.get_string_from_utf8()
+	var data = JSON.parse_string(json_str)
+	
+	if response_code == 200 and data is Dictionary and data.get("success", false):
+		var rows: Array = []
+		if data.has("leaderboard"):
+			rows = data.get("leaderboard", [])
+			if data.has("user_record") and data["user_record"] is Dictionary:
+				var u_rec: Dictionary = data["user_record"]
+				var u_time := float(u_rec.get("survival_time", 0.0))
+				var u_lvl := int(u_rec.get("level", 1))
+				var u_rank := int(u_rec.get("rank", 0))
+				if u_time > best_survival_time:
+					best_survival_time = u_time
+					best_level = u_lvl
+					save_profile()
+				var mins := int(best_survival_time) / 60
+				var secs := int(best_survival_time) % 60
+				if u_rank > 0:
+					personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d) - PUESTO #%d" % [mins, secs, best_level, u_rank]
+				else:
+					personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d)  |  PILOTO: %s" % [mins, secs, best_level, current_pilot_name]
+		elif data.has("top10"):
+			rows = data.get("top10", [])
+			var user_rank: int = int(data.get("rank", 0))
+			status_label.text = "> PUNTUACION REGISTRADA (PUESTO MUNDIAL #%d)" % user_rank
+			status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
 			
-	status_label.text = "[!] Servidor no disponible (HTTP %d, res %d)" % [response_code, _result]
-	status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
+		render_leaderboard(rows)
+		return
+		
+	var err_msg := "Servidor no disponible"
+	if data is Dictionary and data.has("error"):
+		err_msg = str(data["error"])
+	elif data is Dictionary and data.has("reason"):
+		err_msg = str(data["reason"])
+	status_label.text = "[!] " + err_msg
+	status_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
 
 func render_leaderboard(all_rows: Array) -> void:
 	# Podio de inicio: Top 10
