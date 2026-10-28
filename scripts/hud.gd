@@ -42,6 +42,16 @@ var best_survival_time: float = 0.0
 var best_level: int = 1
 var is_submitting: bool = false
 
+const MAX_UPGRADE_LEVEL: int = 10
+var upgrade_levels: Dictionary = {
+	"multi_shot": 0,
+	"damage_boost": 0,
+	"fire_rate": 0,
+	"speed_boost": 0,
+	"magnet_boost": 0,
+	"repair_hull": 0
+}
+
 var archetype_upgrades := [
 	{
 		"id": "multi_shot",
@@ -155,15 +165,40 @@ func show_upgrade_choices(current_level: int) -> void:
 	for child in cards_container.get_children():
 		child.queue_free()
 		
-	var pool := archetype_upgrades.duplicate()
-	pool.shuffle()
-	var selected = pool.slice(0, 3)
+	# Filtrar habilidades que aún no alcanzan el nivel 10
+	var available_pool: Array = []
+	for opt in archetype_upgrades:
+		var cur_lvl: int = upgrade_levels.get(opt["id"], 0)
+		if cur_lvl < MAX_UPGRADE_LEVEL:
+			available_pool.append(opt)
+			
+	available_pool.shuffle()
+	var count_to_show: int = min(available_pool.size(), 3)
+	var selected := available_pool.slice(0, count_to_show)
+	
+	# Si ya maxeó todos los poderes a Nv. 10, ofrecer Reparación de Emergencia
+	if selected.is_empty():
+		var emergency_opt := {
+			"id": "emergency_repair",
+			"title": "Reparación de Emergencia",
+			"desc": "¡Todos los sistemas al máximo! Restaura 100 HP",
+			"color": Color(0.2, 1.0, 0.8)
+		}
+		selected.append(emergency_opt)
 	
 	for opt in selected:
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(550, 105)
 		btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		btn.text = "⚡ %s\n%s" % [opt["title"], opt["desc"]]
+		
+		var title_line: String = ""
+		if opt["id"] == "emergency_repair":
+			title_line = "⚡ %s" % opt["title"]
+		else:
+			var next_lvl: int = upgrade_levels.get(opt["id"], 0) + 1
+			title_line = "⚡ %s Nv %d/%d" % [opt["title"], next_lvl, MAX_UPGRADE_LEVEL]
+			
+		btn.text = "%s\n%s" % [title_line, opt["desc"]]
 		btn.add_theme_font_size_override("font_size", 17)
 		
 		var style := StyleBoxFlat.new()
@@ -190,6 +225,8 @@ func show_upgrade_choices(current_level: int) -> void:
 		cards_container.add_child(btn)
 
 func _on_card_selected(upgrade_id: String) -> void:
+	if upgrade_id != "emergency_repair":
+		upgrade_levels[upgrade_id] = upgrade_levels.get(upgrade_id, 0) + 1
 	upgrade_panel.visible = false
 	get_tree().paused = false
 	emit_signal("upgrade_selected", upgrade_id)

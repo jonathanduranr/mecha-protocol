@@ -247,6 +247,8 @@ func take_damage(amount: float) -> void:
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("enemies") and "contact_damage" in area:
 		take_damage(area.contact_damage)
+		if area.has_method("on_rammed_mecha"):
+			area.on_rammed_mecha()
 
 func _draw() -> void:
 	draw_circle(Vector2.ZERO, 24.0, Color(0.1, 0.8, 1.0, 0.15))

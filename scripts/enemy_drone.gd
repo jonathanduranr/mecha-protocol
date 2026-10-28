@@ -28,6 +28,7 @@ var boss_attack_timer: float = 4.0
 
 @onready var scrap_scene := preload("res://scenes/scrap.tscn")
 @onready var enemy_bullet_scene := preload("res://scenes/enemy_bullet.tscn")
+@onready var explosion_scene := preload("res://scenes/explosion.tscn")
 
 func _ready() -> void:
 	setup_type()
@@ -221,6 +222,16 @@ func die() -> void:
 	scrap.global_position = global_position
 	get_parent().add_child(scrap)
 	queue_free()
+
+func on_rammed_mecha() -> void:
+	if drone_type == "scout" or drone_type == "swarm":
+		spawn_explosion()
+		die()
+
+func spawn_explosion() -> void:
+	var exp_node = explosion_scene.instantiate()
+	exp_node.global_position = global_position
+	get_parent().add_child(exp_node)
 
 func _draw() -> void:
 	var flash := flash_timer > 0
