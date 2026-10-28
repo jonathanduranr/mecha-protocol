@@ -41,9 +41,33 @@ export default {
           level: row.level,
           is_me: Boolean(userId && row.user_id === userId)
         }));
+
+        let user_record = null;
+        if (userId) {
+          const userRow = await env.DB.prepare(`
+            SELECT pilot_name, survival_time, level 
+            FROM leaderboard 
+            WHERE user_id = ?
+          `).bind(userId).first();
+          if (userRow) {
+            const rankRes = await env.DB.prepare(`
+              SELECT COUNT(*) as better_count 
+              FROM leaderboard 
+              WHERE survival_time > ?
+            `).bind(userRow.survival_time).first();
+            user_record = {
+              pilot_name: userRow.pilot_name,
+              survival_time: userRow.survival_time,
+              level: userRow.level,
+              rank: (rankRes?.better_count || 0) + 1
+            };
+          }
+        }
+
         return new Response(JSON.stringify({ 
           success: true, 
-          leaderboard: sanitized 
+          leaderboard: sanitized,
+          user_record: user_record
         }), {
           headers: corsHeaders
         });

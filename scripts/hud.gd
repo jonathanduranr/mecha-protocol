@@ -24,9 +24,7 @@ const SECRET_SALT: String = "mp_cyber_core_sig_99x8172b"
 @onready var rows_container: VBoxContainer = $GameOverPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/RowsContainer
 
 @onready var start_panel: Control = $StartPanel
-@onready var start_pilot_input: LineEdit = $StartPanel/CenterContainer/VBoxContainer/PilotContainer/StartPilotInput
-@onready var start_change_btn: Button = $StartPanel/CenterContainer/VBoxContainer/PilotContainer/StartChangeBtn
-@onready var start_status_label: Label = $StartPanel/CenterContainer/VBoxContainer/StartStatusLabel
+@onready var personal_best_label: Label = $StartPanel/CenterContainer/VBoxContainer/PersonalBestLabel
 @onready var start_rows_container: VBoxContainer = $StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/StartRowsContainer
 @onready var start_button: Button = $StartPanel/CenterContainer/VBoxContainer/StartButton
 
@@ -36,6 +34,8 @@ var elapsed_seconds: float = 0.0
 var final_level_reached: int = 1
 var current_user_id: String = ""
 var current_pilot_name: String = ""
+var best_survival_time: float = 0.0
+var best_level: int = 1
 var is_submitting: bool = false
 
 var archetype_upgrades := [
@@ -84,9 +84,6 @@ func _ready() -> void:
 	game_over_panel.visible = false
 	
 	start_button.pressed.connect(_on_start_protocol_pressed)
-	start_change_btn.pressed.connect(_on_change_name_clicked)
-	start_pilot_input.gui_input.connect(_on_pilot_input_gui_input)
-	start_pilot_input.text_submitted.connect(func(text_val): apply_new_pilot_name(text_val))
 	
 	restart_button.pressed.connect(_on_restart_pressed)
 	save_pilot_btn.pressed.connect(_on_change_name_clicked)
@@ -96,7 +93,7 @@ func _ready() -> void:
 	http_request.request_completed.connect(_on_http_request_completed)
 	load_profile()
 	pilot_input.text = current_pilot_name
-	start_pilot_input.text = current_pilot_name
+	update_personal_best_display()
 	
 	fetch_initial_leaderboard()
 
@@ -104,15 +101,20 @@ func _on_start_protocol_pressed() -> void:
 	start_panel.visible = false
 	get_tree().paused = false
 
+func update_personal_best_display() -> void:
+	if not is_instance_valid(personal_best_label):
+		return
+	if best_survival_time > 0.0:
+		var mins := int(best_survival_time) / 60
+		var secs := int(best_survival_time) % 60
+		personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d)  |  PILOTO: %s" % [mins, secs, best_level, current_pilot_name]
+	else:
+		personal_best_label.text = "PILOTO: %s  //  SIN REGISTRO" % current_pilot_name
+
 func fetch_initial_leaderboard() -> void:
-	start_status_label.text = "> Consultando satelite de clasificacion..."
-	start_status_label.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
 	var url := API_BASE_URL + "/api/leaderboard?user_id=" + current_user_id
 	http_request.cancel_request()
-	var err := http_request.request(url, ["Accept: application/json"], HTTPClient.METHOD_GET)
-	if err != OK:
-		start_status_label.text = "[!] Red desconectada (Sin conexion)"
-		start_status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))
+	var _err := http_request.request(url, ["Accept: application/json"], HTTPClient.METHOD_GET)
 
 func _process(delta: float) -> void:
 	if not get_tree().paused:
@@ -197,6 +199,12 @@ func show_game_over(final_level: int) -> void:
 	var seconds := int(elapsed_seconds) % 60
 	game_over_stats.text = "TIEMPO: %02d:%02d   |   NIVEL: %d" % [minutes, seconds, final_level]
 	
+	if elapsed_seconds > best_survival_time:
+		best_survival_time = elapsed_seconds
+		best_level = final_level
+		save_profile()
+		update_personal_best_display()
+	
 	load_profile()
 	pilot_input.text = current_pilot_name
 	
@@ -244,7 +252,7 @@ func _on_change_name_clicked() -> void:
 	if is_submitting:
 		return
 	if OS.has_feature("web"):
-		# En navegadores móviles (iOS Safari / Android), levantar ventana nativa con teclado
+		# En navegadores moviles (iOS Safari / Android), levantar ventana nativa con teclado
 		var js_prompt := "window.prompt('Ingresa tu apodo o nombre de piloto (max 16 letras):', " + JSON.stringify(current_pilot_name) + ");"
 		var res = JavaScriptBridge.eval(js_prompt)
 		if res != null and str(res).strip_edges() != "":
@@ -265,8 +273,8 @@ func apply_new_pilot_name(input_name: String) -> void:
 		
 	current_pilot_name = clean_name
 	pilot_input.text = current_pilot_name
-	start_pilot_input.text = current_pilot_name
 	save_profile()
+	update_personal_best_display()
 	
 	if game_over_panel.visible:
 		submit_score_to_cloud()
@@ -276,7 +284,6 @@ func apply_new_pilot_name(input_name: String) -> void:
 func _on_http_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	is_submitting = false
 	save_pilot_btn.disabled = false
-	start_change_btn.disabled = false
 	
 	if response_code == 200:
 		var json_str := body.get_string_from_utf8()
@@ -285,8 +292,21 @@ func _on_http_request_completed(_result: int, response_code: int, _headers: Pack
 			var rows: Array = []
 			if data.has("leaderboard"):
 				rows = data.get("leaderboard", [])
-				start_status_label.text = "> Satelite sincronizado. Selecciona iniciar."
-				start_status_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
+				if data.has("user_record") and data["user_record"] is Dictionary:
+					var u_rec: Dictionary = data["user_record"]
+					var u_time := float(u_rec.get("survival_time", 0.0))
+					var u_lvl := int(u_rec.get("level", 1))
+					var u_rank := int(u_rec.get("rank", 0))
+					if u_time > best_survival_time:
+						best_survival_time = u_time
+						best_level = u_lvl
+						save_profile()
+					var mins := int(best_survival_time) / 60
+					var secs := int(best_survival_time) % 60
+					if u_rank > 0:
+						personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d) - PUESTO #%d" % [mins, secs, best_level, u_rank]
+					else:
+						personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d)  |  PILOTO: %s" % [mins, secs, best_level, current_pilot_name]
 			elif data.has("top10"):
 				rows = data.get("top10", [])
 				var user_rank: int = int(data.get("rank", 0))
@@ -298,29 +318,44 @@ func _on_http_request_completed(_result: int, response_code: int, _headers: Pack
 			
 	status_label.text = "[!] Servidor no disponible (HTTP %d, res %d)" % [response_code, _result]
 	status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
-	start_status_label.text = "[!] Servidor no disponible (HTTP %d)" % response_code
-	start_status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
 
-func render_leaderboard(top10: Array) -> void:
-	populate_board_container(rows_container, top10)
-	populate_board_container(start_rows_container, top10)
+func render_leaderboard(all_rows: Array) -> void:
+	# Podio de inicio: Top 3
+	populate_board_container(start_rows_container, all_rows, 3)
+	# Tabla de Game Over: Top 7
+	populate_board_container(rows_container, all_rows, 7)
+	
+	# Verificar si el usuario figura en la lista para actualizar su récord
+	for i in range(all_rows.size()):
+		var r = all_rows[i]
+		if r.get("is_me", false):
+			var s_time := float(r.get("survival_time", 0.0))
+			var lvl := int(r.get("level", 1))
+			if s_time > best_survival_time:
+				best_survival_time = s_time
+				best_level = lvl
+				save_profile()
+			var mins := int(best_survival_time) / 60
+			var secs := int(best_survival_time) % 60
+			personal_best_label.text = "TU RECORD: %02d:%02d (Nv. %d) - PUESTO #%d" % [mins, secs, best_level, i + 1]
+			break
 
-func populate_board_container(target_container: VBoxContainer, top10: Array) -> void:
+func populate_board_container(target_container: VBoxContainer, rows: Array, max_count: int) -> void:
 	if not is_instance_valid(target_container):
 		return
 		
 	for child in target_container.get_children():
 		child.queue_free()
 		
-	if top10.is_empty():
+	if rows.is_empty():
 		var empty_label := Label.new()
-		empty_label.text = "Sin registros aun. Eres el primero!"
+		empty_label.text = "Sin registros aun. ¡Se el primero!"
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		target_container.add_child(empty_label)
 		return
 		
-	for i in range(min(top10.size(), 7)):
-		var row_data = top10[i]
+	for i in range(min(rows.size(), max_count)):
+		var row_data = rows[i]
 		var rank_num := i + 1
 		var p_name := str(row_data.get("pilot_name", "DESCONOCIDO"))
 		var s_time := float(row_data.get("survival_time", 0.0))
@@ -405,6 +440,10 @@ func load_profile() -> void:
 					current_pilot_name = str(parsed["pilot_name"]).strip_edges()
 				elif parsed.has("pilot_id"):
 					current_pilot_name = str(parsed["pilot_id"]).strip_edges()
+				if parsed.has("best_survival_time"):
+					best_survival_time = float(parsed["best_survival_time"])
+				if parsed.has("best_level"):
+					best_level = int(parsed["best_level"])
 	
 	if current_user_id.is_empty():
 		current_user_id = generate_uuid()
@@ -418,7 +457,9 @@ func save_profile() -> void:
 	if file:
 		var data := {
 			"user_id": current_user_id,
-			"pilot_name": current_pilot_name
+			"pilot_name": current_pilot_name,
+			"best_survival_time": best_survival_time,
+			"best_level": best_level
 		}
 		file.store_string(JSON.stringify(data))
 
@@ -434,6 +475,4 @@ func generate_uuid() -> String:
 
 func _on_restart_pressed() -> void:
 	get_tree().paused = false
-	get_tree().reload_current_scene()
-
 	get_tree().reload_current_scene()

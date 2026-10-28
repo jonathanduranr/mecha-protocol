@@ -330,7 +330,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_font_sizes/font_size = 20
-text = "[ REINICIAR PROTOCOLO ]"
+text = "[ ▶ JUGAR DE NUEVO ]"
 
 [node name="StartPanel" type="ColorRect" parent="."]
 anchors_preset = 15
@@ -350,12 +350,12 @@ grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="StartPanel/CenterContainer"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 16
 
 [node name="TitleLabel" type="Label" parent="StartPanel/CenterContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 38
 text = "MECHA PROTOCOL"
 horizontal_alignment = 1
 
@@ -363,102 +363,51 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 16
-text = "IDLE SURVIVOR // SISTEMA AUTÓNOMO"
-horizontal_alignment = 1
-
-[node name="PilotContainer" type="HBoxContainer" parent="StartPanel/CenterContainer/VBoxContainer"]
-layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 8
-
-[node name="PilotTagLabel" type="Label" parent="StartPanel/CenterContainer/VBoxContainer/PilotContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.8, 1, 1)
-theme_override_font_sizes/font_size = 17
-text = "PILOTO:"
-
-[node name="StartPilotInput" type="LineEdit" parent="StartPanel/CenterContainer/VBoxContainer/PilotContainer"]
-custom_minimum_size = Vector2(230, 44)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 17
-theme_override_styles/normal = SubResource("StyleBoxFlat_input")
-text = "PILOTO-0001"
-max_length = 16
-placeholder_text = "Tu nombre"
-
-[node name="StartChangeBtn" type="Button" parent="StartPanel/CenterContainer/VBoxContainer/PilotContainer"]
-custom_minimum_size = Vector2(115, 44)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_save")
-text = "[ CAMBIAR ]"
-
-[node name="StartStatusLabel" type="Label" parent="StartPanel/CenterContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.8, 0.9, 1)
-theme_override_font_sizes/font_size = 14
-text = "> Satélite en línea. Selecciona iniciar."
+text = "IDLE SURVIVOR // AUTO-STEERING"
 horizontal_alignment = 1
 
 [node name="LeaderboardPanel" type="PanelContainer" parent="StartPanel/CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(580, 270)
+custom_minimum_size = Vector2(560, 160)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_board")
 
 [node name="BoardVBox" type="VBoxContainer" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
-[node name="BoardHeader" type="HBoxContainer" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox"]
-layout_mode = 2
-
-[node name="H_Rank" type="Label" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
-custom_minimum_size = Vector2(65, 0)
+[node name="HeaderLabel" type="Label" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 14
-text = "RANGO"
-
-[node name="H_Name" type="Label" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 14
-text = "TOP 10 MUNDIAL"
-
-[node name="H_Time" type="Label" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
-custom_minimum_size = Vector2(90, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 14
-text = "TIEMPO"
+theme_override_font_sizes/font_size = 15
+text = "TOP 3 MUNDIAL"
 horizontal_alignment = 1
-
-[node name="H_Level" type="Label" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox/BoardHeader"]
-custom_minimum_size = Vector2(70, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 14
-text = "NIVEL"
-horizontal_alignment = 2
 
 [node name="HSeparator" type="HSeparator" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox"]
 layout_mode = 2
 
 [node name="StartRowsContainer" type="VBoxContainer" parent="StartPanel/CenterContainer/VBoxContainer/LeaderboardPanel/BoardVBox"]
 layout_mode = 2
-theme_override_constants/separation = 3
+theme_override_constants/separation = 5
+
+[node name="PersonalBestLabel" type="Label" parent="StartPanel/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.7, 1)
+theme_override_font_sizes/font_size = 16
+text = "TU MEJOR MARCA: --:--"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="StartPanel/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
 
 [node name="StartButton" type="Button" parent="StartPanel/CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(500, 72)
+custom_minimum_size = Vector2(480, 78)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_start")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 theme_override_colors/font_color = Color(0.3, 1.0, 0.6, 1)
-text = "[ ▶ INICIAR PROTOCOLO ]"
+text = "[ ▶ JUGAR ]"
 
 [node name="LeaderboardHTTP" type="HTTPRequest" parent="."]
 timeout = 8.0
