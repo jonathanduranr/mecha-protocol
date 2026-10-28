@@ -6,6 +6,10 @@ const API_BASE_URL: String = "https://mecha-leaderboard.jonathanduran.workers.de
 const SAVE_PATH: String = "user://pilot_profile.json"
 const SECRET_SALT: String = "mp_cyber_core_sig_99x8172b"
 
+const MEDAL_GOLD := preload("res://assets/ui/medal_gold.png")
+const MEDAL_SILVER := preload("res://assets/ui/medal_silver.png")
+const MEDAL_BRONZE := preload("res://assets/ui/medal_bronze.png")
+
 @onready var health_bar: ProgressBar = $TopBar/HealthBar
 @onready var xp_bar: ProgressBar = $TopBar/XPBar
 @onready var level_label: Label = $TopBar/LevelLabel
@@ -320,10 +324,10 @@ func _on_http_request_completed(_result: int, response_code: int, _headers: Pack
 	status_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4))
 
 func render_leaderboard(all_rows: Array) -> void:
-	# Podio de inicio: Top 3
-	populate_board_container(start_rows_container, all_rows, 3)
-	# Tabla de Game Over: Top 7
-	populate_board_container(rows_container, all_rows, 7)
+	# Podio de inicio: Top 10
+	populate_board_container(start_rows_container, all_rows, 10)
+	# Tabla de Game Over: Top 10
+	populate_board_container(rows_container, all_rows, 10)
 	
 	# Verificar si el usuario figura en la lista para actualizar su récord
 	for i in range(all_rows.size()):
@@ -368,27 +372,44 @@ func populate_board_container(target_container: VBoxContainer, rows: Array, max_
 		
 		var row_hbox := HBoxContainer.new()
 		row_hbox.custom_minimum_size = Vector2(0, 24)
+		row_hbox.add_theme_constant_override("separation", 4)
+		
+		# Contenedor de Rango con Medalla para Top 3
+		var rank_box := HBoxContainer.new()
+		rank_box.custom_minimum_size = Vector2(70, 0)
+		rank_box.add_theme_constant_override("separation", 4)
+		
+		var medal_rect := TextureRect.new()
+		medal_rect.custom_minimum_size = Vector2(18, 18)
+		medal_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		medal_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		
 		var rank_lbl := Label.new()
-		rank_lbl.custom_minimum_size = Vector2(55, 0)
 		var rank_text := ""
 		var rank_color := Color(0.65, 0.72, 0.82)
 		
 		if rank_num == 1:
+			medal_rect.texture = MEDAL_GOLD
 			rank_text = "#1"
 			rank_color = Color(1.0, 0.85, 0.2)
 		elif rank_num == 2:
+			medal_rect.texture = MEDAL_SILVER
 			rank_text = "#2"
-			rank_color = Color(0.85, 0.9, 0.98)
+			rank_color = Color(0.88, 0.92, 0.98)
 		elif rank_num == 3:
+			medal_rect.texture = MEDAL_BRONZE
 			rank_text = "#3"
-			rank_color = Color(1.0, 0.62, 0.35)
+			rank_color = Color(1.0, 0.65, 0.35)
 		else:
-			rank_text = " %d." % rank_num
+			medal_rect.modulate = Color(1, 1, 1, 0) # Mantiene el mismo ancho sin mostrar medalla
+			rank_text = "%2d." % rank_num
 			
 		rank_lbl.text = rank_text
 		rank_lbl.add_theme_font_size_override("font_size", 14)
 		rank_lbl.add_theme_color_override("font_color", rank_color)
+		
+		rank_box.add_child(medal_rect)
+		rank_box.add_child(rank_lbl)
 		
 		var name_lbl := Label.new()
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -420,7 +441,7 @@ func populate_board_container(target_container: VBoxContainer, rows: Array, max_
 			time_lbl.add_theme_color_override("font_color", muted)
 			lvl_lbl.add_theme_color_override("font_color", muted)
 			
-		row_hbox.add_child(rank_lbl)
+		row_hbox.add_child(rank_box)
 		row_hbox.add_child(name_lbl)
 		row_hbox.add_child(time_lbl)
 		row_hbox.add_child(lvl_lbl)
