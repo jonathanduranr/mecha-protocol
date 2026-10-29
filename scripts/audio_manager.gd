@@ -23,6 +23,11 @@ var user_interacted: bool = false
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS # Funciona incluso si el juego está en pausa
 	
+	# Evitar que la pantalla se bloquee o entre en reposo (iOS, Android, etc.)
+	DisplayServer.screen_set_keep_on(true)
+	if OS.has_feature("web"):
+		_request_web_wake_lock()
+	
 	# Configurar reproductor de música de fondo
 	bgm_player = AudioStreamPlayer.new()
 	bgm_player.bus = "Master"
@@ -41,6 +46,12 @@ func _ready() -> void:
 	# Intentar reproducir de inmediato (si la plataforma lo permite)
 	play_bgm()
 
+func _request_web_wake_lock() -> void:
+	if ClassDB.class_exists("JavaScriptBridge"):
+		var js := Engine.get_singleton("JavaScriptBridge")
+		if js:
+			js.eval("if ('wakeLock' in navigator) { navigator.wakeLock.request('screen').catch(function(){}); }")
+
 func _input(event: InputEvent) -> void:
 	# Desbloqueo garantizado de WebAudio en iOS Safari / Chrome al primer tap o clic
 	if not user_interacted:
@@ -48,6 +59,8 @@ func _input(event: InputEvent) -> void:
 			user_interacted = true
 			if is_music_enabled and not bgm_player.playing:
 				play_bgm()
+			if OS.has_feature("web"):
+				_request_web_wake_lock()
 
 func _on_bgm_finished() -> void:
 	# Garantizar bucle infinito continuo
@@ -100,8 +113,8 @@ func _play_sfx(stream: AudioStream, vol_db: float = 0.0, p_min: float = 0.95, p_
 	player.play()
 
 func play_laser() -> void:
-	# Volumen suave para que no tape la música
-	_play_sfx(sfx_laser, -14.0, 0.93, 1.07)
+	# Disparo táctico mecha: limpio, punchy y suave de fondo
+	_play_sfx(sfx_laser, -12.0, 0.96, 1.04)
 
 func play_explosion() -> void:
 	_play_sfx(sfx_explosion, -8.0, 0.90, 1.10)
