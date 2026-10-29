@@ -113,8 +113,8 @@ func _play_sfx(stream: AudioStream, vol_db: float = 0.0, p_min: float = 0.95, p_
 	player.play()
 
 func play_laser() -> void:
-	# Disparo táctico mecha: limpio, punchy y suave de fondo
-	_play_sfx(sfx_laser, -12.0, 0.96, 1.04)
+	# Disparo láser mecha: rápido, brillante y bien balanceado
+	_play_sfx(sfx_laser, -10.0, 0.95, 1.05)
 
 func play_explosion() -> void:
 	_play_sfx(sfx_explosion, -8.0, 0.90, 1.10)
@@ -123,7 +123,7 @@ func play_ram_explosion() -> void:
 	_play_sfx(sfx_ram_explosion, -4.0, 0.88, 1.05)
 
 func play_scrap() -> void:
-	_play_sfx(sfx_scrap, -13.0, 0.95, 1.15)
+	pass # Silenciado según preferencia del usuario (recolección de orbes XP silenciosa)
 
 func play_levelup() -> void:
 	_play_sfx(sfx_levelup, -3.0, 1.0, 1.0)
