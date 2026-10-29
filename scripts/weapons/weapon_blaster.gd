@@ -57,6 +57,7 @@ func _physics_process(delta: float) -> void:
 			shoot_timer = max(0.06, fire_rate * mult)
 
 func fire_bullets(direction: Vector2) -> void:
+	AudioManager.play_laser()
 	var perp := Vector2(-direction.y, direction.x)
 	var spawn_pos := global_position
 	

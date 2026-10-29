@@ -39,5 +39,6 @@ func attract_to(mecha_node: Node2D) -> void:
 
 func _on_area_entered(area: Area2D) -> void:
 	if area.has_method("gain_xp"):
+		AudioManager.play_scrap()
 		area.gain_xp(xp_value)
 		queue_free()

@@ -217,6 +217,7 @@ func take_damage(amount: float, knockback_dir: Vector2 = Vector2.ZERO, force: fl
 		die()
 
 func die() -> void:
+	AudioManager.play_explosion()
 	var scrap = scrap_scene.instantiate()
 	scrap.xp_value = xp_reward
 	scrap.global_position = global_position
@@ -225,6 +226,7 @@ func die() -> void:
 
 func on_rammed_mecha() -> void:
 	if drone_type == "scout" or drone_type == "swarm":
+		AudioManager.play_ram_explosion()
 		spawn_explosion()
 		die()
 

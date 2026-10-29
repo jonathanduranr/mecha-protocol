@@ -223,6 +223,7 @@ func gain_xp(amount: int) -> void:
 		current_xp -= xp_needed
 		level += 1
 		xp_needed = calculate_xp_needed(level)
+		AudioManager.play_levelup()
 		emit_signal("level_up", level)
 	emit_signal("xp_changed", current_xp, xp_needed, level)
 
@@ -238,6 +239,7 @@ func calculate_xp_needed(lvl: int) -> int:
 func take_damage(amount: float) -> void:
 	if damage_cooldown > 0:
 		return
+	AudioManager.play_mecha_hit()
 	current_health = max(0.0, current_health - amount)
 	damage_cooldown = 0.35
 	emit_signal("health_changed", current_health, max_health)

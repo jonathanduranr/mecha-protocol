@@ -112,6 +112,7 @@ func _ready() -> void:
 	fetch_initial_leaderboard()
 
 func _on_start_protocol_pressed() -> void:
+	AudioManager.play_bgm()
 	start_panel.visible = false
 	get_tree().paused = false
 
@@ -232,6 +233,7 @@ func _on_card_selected(upgrade_id: String) -> void:
 	emit_signal("upgrade_selected", upgrade_id)
 
 func show_game_over(final_level: int) -> void:
+	AudioManager.play_gameover()
 	get_tree().paused = true
 	upgrade_panel.visible = false
 	final_level_reached = final_level
@@ -547,5 +549,6 @@ func generate_uuid() -> String:
 	]
 
 func _on_restart_pressed() -> void:
+	AudioManager.play_bgm()
 	get_tree().paused = false
 	get_tree().reload_current_scene()
