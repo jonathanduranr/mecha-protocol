@@ -17,6 +17,8 @@ var pool_index: int = 0
 
 var is_music_enabled: bool = true
 var is_sfx_enabled: bool = true
+var current_tween: Tween = null
+var user_interacted: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS # Funciona incluso si el juego está en pausa
@@ -24,10 +26,9 @@ func _ready() -> void:
 	# Configurar reproductor de música de fondo
 	bgm_player = AudioStreamPlayer.new()
 	bgm_player.bus = "Master"
-	if bgm_combat is AudioStreamWAV:
-		bgm_combat.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	bgm_player.stream = bgm_combat
-	bgm_player.volume_db = -6.0
+	bgm_player.volume_db = 0.0 # Volumen completo
+	bgm_player.finished.connect(_on_bgm_finished)
 	add_child(bgm_player)
 	
 	# Crear pool de reproductores SFX para permitir polifonía
@@ -36,24 +37,50 @@ func _ready() -> void:
 		p.bus = "Master"
 		add_child(p)
 		sfx_pool.append(p)
+		
+	# Intentar reproducir de inmediato (si la plataforma lo permite)
+	play_bgm()
+
+func _input(event: InputEvent) -> void:
+	# Desbloqueo garantizado de WebAudio en iOS Safari / Chrome al primer tap o clic
+	if not user_interacted:
+		if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+			user_interacted = true
+			if is_music_enabled and not bgm_player.playing:
+				play_bgm()
+
+func _on_bgm_finished() -> void:
+	# Garantizar bucle infinito continuo
+	if is_music_enabled and is_instance_valid(bgm_player):
+		bgm_player.volume_db = 0.0
+		bgm_player.play()
 
 func play_bgm() -> void:
 	if not is_music_enabled:
 		return
+	if current_tween and current_tween.is_valid():
+		current_tween.kill()
+		current_tween = null
+		
+	bgm_player.volume_db = 0.0
 	if not bgm_player.playing:
-		bgm_player.volume_db = -6.0
 		bgm_player.play()
 
 func stop_bgm() -> void:
+	if current_tween and current_tween.is_valid():
+		current_tween.kill()
+		current_tween = null
 	if bgm_player.playing:
 		bgm_player.stop()
 
-func fade_out_bgm(duration: float = 1.0) -> void:
+func fade_out_bgm(duration: float = 0.8) -> void:
 	if not bgm_player.playing:
 		return
-	var tween := create_tween()
-	tween.tween_property(bgm_player, "volume_db", -40.0, duration)
-	tween.tween_callback(Callable(self, "stop_bgm"))
+	if current_tween and current_tween.is_valid():
+		current_tween.kill()
+	current_tween = create_tween()
+	current_tween.tween_property(bgm_player, "volume_db", -36.0, duration)
+	current_tween.tween_callback(Callable(self, "stop_bgm"))
 
 func _get_available_sfx_player() -> AudioStreamPlayer:
 	for p in sfx_pool:
@@ -73,23 +100,24 @@ func _play_sfx(stream: AudioStream, vol_db: float = 0.0, p_min: float = 0.95, p_
 	player.play()
 
 func play_laser() -> void:
-	_play_sfx(sfx_laser, -8.0, 0.92, 1.08)
+	# Volumen suave para que no tape la música
+	_play_sfx(sfx_laser, -14.0, 0.93, 1.07)
 
 func play_explosion() -> void:
-	_play_sfx(sfx_explosion, -4.0, 0.90, 1.10)
+	_play_sfx(sfx_explosion, -8.0, 0.90, 1.10)
 
 func play_ram_explosion() -> void:
-	_play_sfx(sfx_ram_explosion, -2.0, 0.85, 1.05)
+	_play_sfx(sfx_ram_explosion, -4.0, 0.88, 1.05)
 
 func play_scrap() -> void:
-	_play_sfx(sfx_scrap, -10.0, 0.95, 1.15)
+	_play_sfx(sfx_scrap, -13.0, 0.95, 1.15)
 
 func play_levelup() -> void:
-	_play_sfx(sfx_levelup, -2.0, 1.0, 1.0)
+	_play_sfx(sfx_levelup, -3.0, 1.0, 1.0)
 
 func play_mecha_hit() -> void:
-	_play_sfx(sfx_mecha_hit, -3.0, 0.90, 1.05)
+	_play_sfx(sfx_mecha_hit, -4.0, 0.90, 1.05)
 
 func play_gameover() -> void:
-	fade_out_bgm(0.5)
+	fade_out_bgm(0.6)
 	_play_sfx(sfx_gameover, 0.0, 1.0, 1.0)
