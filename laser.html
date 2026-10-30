@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>6 Nuevas Opciones de Colisión - Mecha Protocol</title>
+  <title>Panel de Validación de Audio - Mecha Protocol</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -36,10 +36,23 @@
       letter-spacing: 0.5px;
       margin-bottom: 6px;
     }
+    h2 {
+      color: #e2e8f0;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 26px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     p.sub {
       color: #94a3b8;
       font-size: 13px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       line-height: 1.4;
     }
     .card {
@@ -74,12 +87,9 @@
       border-radius: 6px;
       font-weight: 600;
     }
-    .tag-amber { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
-    .tag-cyan { background: #083344; color: #22d3ee; border: 1px solid #0891b2; }
-    .tag-orange { background: #431407; color: #fb923c; border: 1px solid #ea580c; }
-    .tag-blue { background: #172554; color: #60a5fa; border: 1px solid #2563eb; }
-    .tag-emerald { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
-    .tag-purple { background: #2e1065; color: #c084fc; border: 1px solid #7e22ce; }
+    .tag-ok { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+    .tag-pending { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
+    .tag-muted { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
     .desc {
       font-size: 12px;
       color: #94a3b8;
@@ -101,12 +111,12 @@
       transition: transform 0.05s, opacity 0.2s;
     }
     .btn-play:active { transform: scale(0.98); }
-    .btn-amber { background: #f59e0b; color: #1c1917; }
     .btn-cyan { background: #06b6d4; color: #042f2e; }
     .btn-orange { background: #f97316; color: #fff; }
-    .btn-blue { background: #3b82f6; color: #fff; }
     .btn-emerald { background: #10b981; color: #022c22; }
+    .btn-rose { background: #f43f5e; color: #fff; }
     .btn-purple { background: #8b5cf6; color: #fff; }
+    .btn-pink { background: #ec4899; color: #fff; }
     audio {
       width: 100%;
       height: 38px;
@@ -126,101 +136,107 @@
 </head>
 <body>
   <div class="container">
-    <span class="badge-top">Diseño de Audio v2.0</span>
-    <h1>6 Nuevas Opciones de Colisión</h1>
-    <p class="sub">Toca cualquier botón para escuchar los 6 conceptos totalmente diferentes. Cada muestra dura 2 segundos para sonar nítida en móvil y PC.</p>
+    <span class="badge-top">Estado de Audio v2.0</span>
+    <h1>Panel de Validación de Sonido</h1>
+    <p class="sub">Toca cualquier botón para escuchar los sonidos pendientes de validación o repasar los ya elegidos.</p>
 
-    <!-- Opción 1 -->
+    <!-- PENDIENTES DE VALIDAR -->
+    <h2>🔍 Sonidos por Validar (Escucha estos dos)</h2>
+
+    <!-- Subida de Nivel -->
     <div class="card">
       <div class="card-header">
-        <span class="title">1. Prensa Hidráulica / Crush Mecánico</span>
-        <span class="tag tag-amber">Pistón Industrial</span>
+        <span class="title">1. Subida de Nivel (Level Up)</span>
+        <span class="tag tag-pending">Pendiente Validar</span>
       </div>
-      <p class="desc">¡K-CHUNG! Golpe neumático pesado y seco, como un émbolo o pisada mecha triturando el chasis en seco (cero eco molesto).</p>
-      <button class="btn-play btn-amber" onclick="playFile('preview_col_hydraulic.wav')">
-        ▶ Escuchar Opción 1: Prensa Hidráulica
+      <p class="desc">Arpegio ascendente brillante de 4 notas (C5 → E5 → G5 → C6) estilo victoria futurista al subir de nivel y abrir mejoras.</p>
+      <button class="btn-play btn-emerald" onclick="playFile('preview_levelup_v2.wav')">
+        ▶ Escuchar Subida de Nivel (Remaster)
       </button>
       <audio controls preload="auto">
-        <source src="preview_col_hydraulic.wav" type="audio/wav">
+        <source src="preview_levelup_v2.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- Opción 2 -->
+    <!-- Daño al Mecha -->
     <div class="card">
       <div class="card-header">
-        <span class="title">2. Ping de Escudo Arcade (Parry Chime)</span>
-        <span class="tag tag-cyan">Campana Sci-Fi</span>
+        <span class="title">2. Daño al Mecha (Mecha Hit)</span>
+        <span class="tag tag-pending">Pendiente Validar</span>
       </div>
-      <p class="desc">¡PING! Campana pura y cristalina tipo escudo de energía / parry perfecto. Tono limpio y muy placentero al oído.</p>
-      <button class="btn-play btn-cyan" onclick="playFile('preview_col_ping.wav')">
-        ▶ Escuchar Opción 2: Ping de Escudo
+      <p class="desc">Impacto de blindaje grave y seco con advertencia táctica, con mucha más pegada y ganancia para avisar que pierdes vida.</p>
+      <button class="btn-play btn-rose" onclick="playFile('preview_mecha_hit_v2.wav')">
+        ▶ Escuchar Daño al Mecha (Remaster)
       </button>
       <audio controls preload="auto">
-        <source src="preview_col_ping.wav" type="audio/wav">
+        <source src="preview_mecha_hit_v2.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- Opción 3 -->
+    <!-- Game Over -->
     <div class="card">
       <div class="card-header">
-        <span class="title">3. Vaporización Térmica / Siseo Plasma</span>
-        <span class="tag tag-orange">Aura Térmica</span>
+        <span class="title">3. Derrota / Game Over</span>
+        <span class="tag tag-pending">Pendiente Validar</span>
       </div>
-      <p class="desc">¡TSSHH-POP! El dron se desintegra al instante al rozar el aura de calor del mecha. Sin retumbe de bajos, muy aireado.</p>
+      <p class="desc">Caída dramática de energía ("power down") cuando la salud del Mecha llega a cero.</p>
+      <button class="btn-play btn-purple" onclick="playFile('preview_gameover.wav')">
+        ▶ Escuchar Game Over
+      </button>
+      <audio controls preload="auto">
+        <source src="preview_gameover.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <!-- ELEGIDOS Y ACTIVOS -->
+    <h2>✅ Sonidos Elegidos y Aprobados (En el Juego)</h2>
+
+    <!-- Disparo Láser -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">Disparo Haz de Plasma (Beam Rifle)</span>
+        <span class="tag tag-ok">Aprobado</span>
+      </div>
+      <p class="desc">Sonido rápido, limpio y sci-fi (1750 Hz → 240 Hz). Suena al disparar a los drones.</p>
+      <button class="btn-play btn-cyan" onclick="playFile('level_1.wav')">
+        ▶ Escuchar Ráfaga Láser
+      </button>
+    </div>
+
+    <!-- Colisión de Dron -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">Colisión: Vaporización Térmica (Opción 3)</span>
+        <span class="tag tag-ok">Aprobado</span>
+      </div>
+      <p class="desc">¡TSSHH-POP! El dron se desintegra al instante contra el aura térmica del mecha, sin explosión tosca.</p>
       <button class="btn-play btn-orange" onclick="playFile('preview_col_vaporize.wav')">
-        ▶ Escuchar Opción 3: Vaporización Plasma
+        ▶ Escuchar Colisión (Opción 3)
       </button>
-      <audio controls preload="auto">
-        <source src="preview_col_vaporize.wav" type="audio/wav">
-      </audio>
     </div>
 
-    <!-- Opción 4 -->
+    <!-- Música -->
     <div class="card">
       <div class="card-header">
-        <span class="title">4. Golpe Sordo / Sub-Bass Thump</span>
-        <span class="tag tag-blue">Impacto Seco</span>
+        <span class="title">Música de Combate (BGM Cyberpunk)</span>
+        <span class="tag tag-ok">Aprobado</span>
       </div>
-      <p class="desc">¡THUMP! Golpe sordo y amortiguado de subgraves profundos, como suspensión militar o impacto contra titanio sin agudos molestos.</p>
-      <button class="btn-play btn-blue" onclick="playFile('preview_col_thump.wav')">
-        ▶ Escuchar Opción 4: Golpe Sordo
+      <p class="desc">Pista Synthwave de 124 BPM en bucle continuo durante la partida.</p>
+      <button class="btn-play btn-pink" onclick="playFile('preview_bgm.wav')">
+        ▶ Escuchar Música de Fondo
       </button>
-      <audio controls preload="auto">
-        <source src="preview_col_thump.wav" type="audio/wav">
-      </audio>
     </div>
 
-    <!-- Opción 5 -->
+    <!-- SILENCIADOS -->
+    <h2>🔇 Sonidos Silenciados (Eliminados a Petición)</h2>
     <div class="card">
-      <div class="card-header">
-        <span class="title">5. Rotura de Núcleo / Cristal Blindado</span>
-        <span class="tag tag-emerald">Vidrio Quebradizo</span>
-      </div>
-      <p class="desc">¡CRACK! El lente o núcleo del dron quebrándose en micro-fragmentos. Agudo, crujiente y sumamente satisfactorio.</p>
-      <button class="btn-play btn-emerald" onclick="playFile('preview_col_glass.wav')">
-        ▶ Escuchar Opción 5: Rotura de Núcleo
-      </button>
-      <audio controls preload="auto">
-        <source src="preview_col_glass.wav" type="audio/wav">
-      </audio>
+      <p class="desc" style="margin: 0; line-height: 1.6;">
+        • <strong>Impacto/Muerte de proyectil en dron:</strong> Silenciado (para que no sature al eliminar docenas de enemigos).<br>
+        • <strong>Recolección de orbes de XP / Chatarra:</strong> Silenciado (absorción limpia y silenciosa).
+      </p>
     </div>
 
-    <!-- Opción 6 -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">6. Repulsor Gravitacional (Graviton Pop)</span>
-        <span class="tag tag-purple">Succión & Despido</span>
-      </div>
-      <p class="desc">¡VWUMP-POP! Un micro-tirón gravitacional hacia adentro seguido de un chasquido de expulsión al vacío.</p>
-      <button class="btn-play btn-purple" onclick="playFile('preview_col_graviton.wav')">
-        ▶ Escuchar Opción 6: Repulsor Gravitacional
-      </button>
-      <audio controls preload="auto">
-        <source src="preview_col_graviton.wav" type="audio/wav">
-      </audio>
-    </div>
-
-    <a href="index.html" class="back-link">← Volver al Juego Mecha Protocol</a>
+    <a href="index.html" class="back-link">← Jugar Mecha Protocol en Vivo</a>
   </div>
 
   <script>
