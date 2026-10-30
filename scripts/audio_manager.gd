@@ -32,7 +32,7 @@ func _ready() -> void:
 	bgm_player = AudioStreamPlayer.new()
 	bgm_player.bus = "Master"
 	bgm_player.stream = bgm_combat
-	bgm_player.volume_db = -3.5 # Volumen equilibrado para que los disparos y efectos resalten con claridad
+	bgm_player.volume_db = -1.5 # Música envolvente destacada
 	bgm_player.finished.connect(_on_bgm_finished)
 	add_child(bgm_player)
 	
@@ -65,7 +65,7 @@ func _input(event: InputEvent) -> void:
 func _on_bgm_finished() -> void:
 	# Garantizar bucle infinito continuo
 	if is_music_enabled and is_instance_valid(bgm_player):
-		bgm_player.volume_db = -3.5
+		bgm_player.volume_db = -1.5
 		bgm_player.play()
 
 func play_bgm() -> void:
@@ -75,7 +75,7 @@ func play_bgm() -> void:
 		current_tween.kill()
 		current_tween = null
 		
-	bgm_player.volume_db = -3.5
+	bgm_player.volume_db = -1.5
 	if not bgm_player.playing:
 		bgm_player.play()
 
@@ -113,24 +113,25 @@ func _play_sfx(stream: AudioStream, vol_db: float = 0.0, p_min: float = 0.95, p_
 	player.play()
 
 func play_laser() -> void:
-	# Disparo láser mecha: presente, potente y claramente audible
-	_play_sfx(sfx_laser, -2.0, 0.96, 1.04)
+	# Disparo láser mecha: atenuado suavemente para ráfagas continuas placenteras
+	_play_sfx(sfx_laser, -8.5, 0.96, 1.04)
 
 func play_explosion() -> void:
-	_play_sfx(sfx_explosion, -8.0, 0.90, 1.10)
+	_play_sfx(sfx_explosion, -12.0, 0.90, 1.10)
 
 func play_ram_explosion() -> void:
-	_play_sfx(sfx_ram_explosion, -4.0, 0.88, 1.05)
+	# Vaporización térmica suave
+	_play_sfx(sfx_ram_explosion, -8.0, 0.88, 1.05)
 
 func play_scrap() -> void:
 	pass # Silenciado según preferencia del usuario (recolección de orbes XP silenciosa)
 
 func play_levelup() -> void:
-	_play_sfx(sfx_levelup, -3.0, 1.0, 1.0)
+	_play_sfx(sfx_levelup, -6.5, 1.0, 1.0)
 
 func play_mecha_hit() -> void:
 	pass # Silenciado según preferencia del usuario (combate limpio)
 
 func play_gameover() -> void:
 	fade_out_bgm(0.6)
-	_play_sfx(sfx_gameover, 0.0, 1.0, 1.0)
+	_play_sfx(sfx_gameover, -3.5, 1.0, 1.0)
