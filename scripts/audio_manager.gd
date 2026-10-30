@@ -113,25 +113,25 @@ func _play_sfx(stream: AudioStream, vol_db: float = 0.0, p_min: float = 0.95, p_
 	player.play()
 
 func play_laser() -> void:
-	# Disparo láser mecha: atenuado suavemente para ráfagas continuas placenteras
-	_play_sfx(sfx_laser, -8.5, 0.96, 1.04)
+	# Disparo láser mecha: atenuado suavemente (-12.5 dB)
+	_play_sfx(sfx_laser, -12.5, 0.96, 1.04)
 
 func play_explosion() -> void:
-	_play_sfx(sfx_explosion, -12.0, 0.90, 1.10)
+	_play_sfx(sfx_explosion, -16.0, 0.90, 1.10)
 
 func play_ram_explosion() -> void:
-	# Vaporización térmica suave
-	_play_sfx(sfx_ram_explosion, -8.0, 0.88, 1.05)
+	# Vaporización térmica suave (-12.0 dB)
+	_play_sfx(sfx_ram_explosion, -12.0, 0.88, 1.05)
 
 func play_scrap() -> void:
 	pass # Silenciado según preferencia del usuario (recolección de orbes XP silenciosa)
 
 func play_levelup() -> void:
-	_play_sfx(sfx_levelup, -6.5, 1.0, 1.0)
+	_play_sfx(sfx_levelup, -10.0, 1.0, 1.0)
 
 func play_mecha_hit() -> void:
 	pass # Silenciado según preferencia del usuario (combate limpio)
 
 func play_gameover() -> void:
 	fade_out_bgm(0.6)
-	_play_sfx(sfx_gameover, -3.5, 1.0, 1.0)
+	_play_sfx(sfx_gameover, -7.0, 1.0, 1.0)
