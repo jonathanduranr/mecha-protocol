@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0a0f1d;
+      background: #0b0f19;
       color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 24px 16px;
@@ -29,13 +29,13 @@
     p.sub {
       color: #94a3b8;
       font-size: 13px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .card {
-      background: #111827;
-      border: 1px solid #1f2937;
+      background: #131b2e;
+      border: 1px solid #1e293b;
       border-radius: 14px;
-      padding: 16px;
+      padding: 18px;
       margin-bottom: 16px;
       transition: border-color 0.2s;
     }
@@ -49,7 +49,7 @@
       margin-bottom: 8px;
     }
     .title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
       color: #fff;
     }
@@ -67,10 +67,15 @@
       line-height: 1.4;
       margin-bottom: 14px;
     }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
     .btn-play {
-      width: 100%;
-      padding: 14px;
-      font-size: 15px;
+      flex: 1;
+      padding: 14px 10px;
+      font-size: 14px;
       font-weight: 700;
       border: none;
       border-radius: 10px;
@@ -78,27 +83,27 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      transition: transform 0.1s, opacity 0.2s;
+      gap: 6px;
+      transition: transform 0.05s, opacity 0.2s;
     }
     .btn-play:active {
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
-    .btn-cyan {
-      background: #06b6d4;
-      color: #042f2e;
-    }
-    .btn-violet {
-      background: #8b5cf6;
-      color: #fff;
-    }
-    .btn-pink {
-      background: #ec4899;
-      color: #fff;
+    .btn-cyan { background: #06b6d4; color: #042f2e; }
+    .btn-violet { background: #8b5cf6; color: #fff; }
+    .btn-pink { background: #ec4899; color: #fff; }
+    .btn-single {
+      background: #1e293b;
+      color: #cbd5e1;
+      font-size: 12px;
+      flex: 0 0 auto;
+      padding: 0 14px;
     }
     audio {
       width: 100%;
-      margin-top: 10px;
+      height: 40px;
+      margin-top: 6px;
+      border-radius: 8px;
     }
     .back-link {
       display: block;
@@ -106,7 +111,7 @@
       margin-top: 24px;
       color: #38bdf8;
       text-decoration: none;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
     }
   </style>
@@ -114,20 +119,22 @@
 <body>
   <div class="container">
     <h1>⚡ Sonidos de Rayo Láser</h1>
-    <p class="sub">Toca cualquier botón o usa el reproductor para escucharlos claramente.</p>
+    <p class="sub">Cada botón reproduce una ráfaga de disparos para que se escuche claro y continuo.</p>
 
     <!-- Opción 1 -->
     <div class="card">
       <div class="card-header">
         <span class="title">1. Haz de Plasma (Beam Rifle)</span>
-        <span class="badge">Activo en el juego</span>
+        <span class="badge">En el juego</span>
       </div>
-      <p class="desc">Zap concentrado de energía sci-fi/anime (1750 Hz → 240 Hz). Limpio, potente y sin distorsión metálica.</p>
-      <button class="btn-play btn-cyan" onclick="document.getElementById('audio-beam').play()">
-        ▶ Escuchar Haz de Plasma
-      </button>
+      <p class="desc">Rayo concentrado sci-fi moderno. Limpio, penetrante y sin saturación.</p>
+      <div class="btn-row">
+        <button class="btn-play btn-cyan" onclick="playAudio('audio-beam')">
+          ▶ Escuchar Ráfaga (5 tiros)
+        </button>
+      </div>
       <audio id="audio-beam" controls preload="auto">
-        <source src="laser_beam.wav" type="audio/wav">
+        <source src="demo_beam.wav" type="audio/wav">
       </audio>
     </div>
 
@@ -136,12 +143,14 @@
       <div class="card-header">
         <span class="title">2. Blaster Espacial Clásico</span>
       </div>
-      <p class="desc">El clásico sonido con "twang" y rebote metálico tipo cine espacial / Star Wars (2400 Hz → 300 Hz).</p>
-      <button class="btn-play btn-violet" onclick="document.getElementById('audio-blaster').play()">
-        ▶ Escuchar Blaster Clásico
-      </button>
+      <p class="desc">Efecto retro de cine espacial con "twang" y rebote metálico tipo blaster.</p>
+      <div class="btn-row">
+        <button class="btn-play btn-violet" onclick="playAudio('audio-blaster')">
+          ▶ Escuchar Ráfaga (5 tiros)
+        </button>
+      </div>
       <audio id="audio-blaster" controls preload="auto">
-        <source src="laser_blaster.wav" type="audio/wav">
+        <source src="demo_blaster.wav" type="audio/wav">
       </audio>
     </div>
 
@@ -150,16 +159,33 @@
       <div class="card-header">
         <span class="title">3. Pulso Neón Cyberpunk</span>
       </div>
-      <p class="desc">Láser sintético futurista con armónicos graves y tono synthwave (1350 Hz → 160 Hz).</p>
-      <button class="btn-play btn-pink" onclick="document.getElementById('audio-pulse').play()">
-        ▶ Escuchar Pulso Neón
-      </button>
+      <p class="desc">Sweep sintético con subgraves, sonido denso y futurista estilo Synthwave.</p>
+      <div class="btn-row">
+        <button class="btn-play btn-pink" onclick="playAudio('audio-pulse')">
+          ▶ Escuchar Ráfaga (5 tiros)
+        </button>
+      </div>
       <audio id="audio-pulse" controls preload="auto">
-        <source src="laser_pulse.wav" type="audio/wav">
+        <source src="demo_pulse.wav" type="audio/wav">
       </audio>
     </div>
 
     <a href="index.html" class="back-link">← Volver al Juego Mecha Protocol</a>
   </div>
+
+  <script>
+    function playAudio(id) {
+      const audios = document.querySelectorAll('audio');
+      audios.forEach(a => {
+        a.pause();
+        a.currentTime = 0;
+      });
+      const target = document.getElementById(id);
+      if (target) {
+        target.currentTime = 0;
+        target.play();
+      }
+    }
+  </script>
 </body>
 </html>
