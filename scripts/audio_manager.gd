@@ -32,7 +32,7 @@ func _ready() -> void:
 	bgm_player = AudioStreamPlayer.new()
 	bgm_player.bus = "Master"
 	bgm_player.stream = bgm_combat
-	bgm_player.volume_db = 0.0 # Volumen completo
+	bgm_player.volume_db = -3.5 # Volumen equilibrado para que los disparos y efectos resalten con claridad
 	bgm_player.finished.connect(_on_bgm_finished)
 	add_child(bgm_player)
 	
@@ -65,7 +65,7 @@ func _input(event: InputEvent) -> void:
 func _on_bgm_finished() -> void:
 	# Garantizar bucle infinito continuo
 	if is_music_enabled and is_instance_valid(bgm_player):
-		bgm_player.volume_db = 0.0
+		bgm_player.volume_db = -3.5
 		bgm_player.play()
 
 func play_bgm() -> void:
@@ -75,7 +75,7 @@ func play_bgm() -> void:
 		current_tween.kill()
 		current_tween = null
 		
-	bgm_player.volume_db = 0.0
+	bgm_player.volume_db = -3.5
 	if not bgm_player.playing:
 		bgm_player.play()
 
@@ -113,8 +113,8 @@ func _play_sfx(stream: AudioStream, vol_db: float = 0.0, p_min: float = 0.95, p_
 	player.play()
 
 func play_laser() -> void:
-	# Disparo láser mecha: rápido, brillante y bien balanceado
-	_play_sfx(sfx_laser, -10.0, 0.95, 1.05)
+	# Disparo láser mecha: presente, potente y claramente audible
+	_play_sfx(sfx_laser, -2.0, 0.96, 1.04)
 
 func play_explosion() -> void:
 	_play_sfx(sfx_explosion, -8.0, 0.90, 1.10)
