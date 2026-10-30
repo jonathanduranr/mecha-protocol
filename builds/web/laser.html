@@ -89,7 +89,7 @@
     }
     .tag-ok { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
     .tag-pending { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
-    .tag-muted { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+    .tag-purple { background: #2e1065; color: #c084fc; border: 1px solid #7e22ce; }
     .desc {
       font-size: 12px;
       color: #94a3b8;
@@ -111,11 +111,12 @@
       transition: transform 0.05s, opacity 0.2s;
     }
     .btn-play:active { transform: scale(0.98); }
+    .btn-purple { background: #8b5cf6; color: #fff; }
+    .btn-indigo { background: #6366f1; color: #fff; }
+    .btn-rose { background: #f43f5e; color: #fff; }
+    .btn-emerald { background: #10b981; color: #022c22; }
     .btn-cyan { background: #06b6d4; color: #042f2e; }
     .btn-orange { background: #f97316; color: #fff; }
-    .btn-emerald { background: #10b981; color: #022c22; }
-    .btn-rose { background: #f43f5e; color: #fff; }
-    .btn-purple { background: #8b5cf6; color: #fff; }
     .btn-pink { background: #ec4899; color: #fff; }
     audio {
       width: 100%;
@@ -136,104 +137,105 @@
 </head>
 <body>
   <div class="container">
-    <span class="badge-top">Estado de Audio v2.0</span>
+    <span class="badge-top">Audio Manager v2.2</span>
     <h1>Panel de Validación de Sonido</h1>
-    <p class="sub">Toca cualquier botón para escuchar los sonidos pendientes de validación o repasar los ya elegidos.</p>
+    <p class="sub">Toca cualquier botón para escuchar los sonidos actualizados y estirados.</p>
 
-    <!-- PENDIENTES DE VALIDAR -->
-    <h2>🔍 Sonidos por Validar (Escucha estos dos)</h2>
+    <!-- ESTIRADO: GAME OVER -->
+    <h2>💀 Game Over Estirado (Prueba ambas duraciones)</h2>
 
-    <!-- Subida de Nivel -->
+    <!-- Game Over 2.1s (Activo en el juego) -->
     <div class="card">
       <div class="card-header">
-        <span class="title">1. Subida de Nivel (Level Up)</span>
-        <span class="tag tag-pending">Pendiente Validar</span>
+        <span class="title">Game Over Estirado (2.1 seg)</span>
+        <span class="tag tag-ok">Activo en Juego</span>
       </div>
-      <p class="desc">Arpegio ascendente brillante de 4 notas (C5 → E5 → G5 → C6) estilo victoria futurista al subir de nivel y abrir mejoras.</p>
-      <button class="btn-play btn-emerald" onclick="playFile('preview_levelup_v2.wav')">
-        ▶ Escuchar Subida de Nivel (Remaster)
-      </button>
-      <audio controls preload="auto">
-        <source src="preview_levelup_v2.wav" type="audio/wav">
-      </audio>
-    </div>
-
-    <!-- Daño al Mecha -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">2. Daño al Mecha (Mecha Hit)</span>
-        <span class="tag tag-pending">Pendiente Validar</span>
-      </div>
-      <p class="desc">Impacto de blindaje grave y seco con advertencia táctica, con mucha más pegada y ganancia para avisar que pierdes vida.</p>
-      <button class="btn-play btn-rose" onclick="playFile('preview_mecha_hit_v2.wav')">
-        ▶ Escuchar Daño al Mecha (Remaster)
-      </button>
-      <audio controls preload="auto">
-        <source src="preview_mecha_hit_v2.wav" type="audio/wav">
-      </audio>
-    </div>
-
-    <!-- Game Over -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">3. Derrota / Game Over</span>
-        <span class="tag tag-pending">Pendiente Validar</span>
-      </div>
-      <p class="desc">Caída dramática de energía ("power down") cuando la salud del Mecha llega a cero.</p>
+      <p class="desc">Descenso gradual de turbina (420 Hz → 32 Hz) con apagón progresivo del reactor y siseo térmico. Más de el doble que el original.</p>
       <button class="btn-play btn-purple" onclick="playFile('preview_gameover.wav')">
-        ▶ Escuchar Game Over
+        ▶ Escuchar Game Over (2.1s - Activo)
       </button>
       <audio controls preload="auto">
         <source src="preview_gameover.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- ELEGIDOS Y ACTIVOS -->
-    <h2>✅ Sonidos Elegidos y Aprobados (En el Juego)</h2>
-
-    <!-- Disparo Láser -->
+    <!-- Game Over 2.4s (Extra largo) -->
     <div class="card">
       <div class="card-header">
-        <span class="title">Disparo Haz de Plasma (Beam Rifle)</span>
+        <span class="title">Game Over Extra Largo (2.4 seg)</span>
+        <span class="tag tag-purple">Alternativa +Lenta</span>
+      </div>
+      <p class="desc">Caída en curva suave con mayor presencia de sub-bajos y despresurización lenta del núcleo.</p>
+      <button class="btn-play btn-indigo" onclick="playFile('preview_gameover_long.wav')">
+        ▶ Escuchar Game Over (2.4s - Extra Largo)
+      </button>
+      <audio controls preload="auto">
+        <source src="preview_gameover_long.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <!-- PENDIENTE DE VALIDAR: DAÑO AL MECHA -->
+    <h2>🛡️ Último Sonido Pendiente de Validar</h2>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="title">Daño al Mecha (Mecha Hit Remaster)</span>
+        <span class="tag tag-pending">Pendiente Validar</span>
+      </div>
+      <p class="desc">Golpe metálico seco de advertencia táctica con alta ganancia y crujido para notar claramente cuando recibes daño.</p>
+      <button class="btn-play btn-rose" onclick="playFile('preview_mecha_hit_v2.wav')">
+        ▶ Escuchar Daño al Mecha
+      </button>
+      <audio controls preload="auto">
+        <source src="preview_mecha_hit_v2.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <!-- ELEGIDOS Y APROBADOS -->
+    <h2>✅ Sonidos Elegidos y Aprobados</h2>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="title">Subida de Nivel (Level Up)</span>
         <span class="tag tag-ok">Aprobado</span>
       </div>
-      <p class="desc">Sonido rápido, limpio y sci-fi (1750 Hz → 240 Hz). Suena al disparar a los drones.</p>
-      <button class="btn-play btn-cyan" onclick="playFile('level_1.wav')">
-        ▶ Escuchar Ráfaga Láser
+      <p class="desc">Arpegio de 4 notas ascendentes triunfales al llenar la barra de XP.</p>
+      <button class="btn-play btn-emerald" onclick="playFile('preview_levelup_v2.wav')">
+        ▶ Escuchar Subida de Nivel
       </button>
     </div>
 
-    <!-- Colisión de Dron -->
     <div class="card">
       <div class="card-header">
         <span class="title">Colisión: Vaporización Térmica (Opción 3)</span>
         <span class="tag tag-ok">Aprobado</span>
       </div>
-      <p class="desc">¡TSSHH-POP! El dron se desintegra al instante contra el aura térmica del mecha, sin explosión tosca.</p>
+      <p class="desc">¡TSSHH-POP! Desintegración instantánea y limpia al tocar el aura del mecha.</p>
       <button class="btn-play btn-orange" onclick="playFile('preview_col_vaporize.wav')">
         ▶ Escuchar Colisión (Opción 3)
       </button>
     </div>
 
-    <!-- Música -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">Disparo: Haz de Plasma</span>
+        <span class="tag tag-ok">Aprobado</span>
+      </div>
+      <p class="desc">Disparo sci-fi rápido y limpio (1750 Hz → 240 Hz).</p>
+      <button class="btn-play btn-cyan" onclick="playFile('level_1.wav')">
+        ▶ Escuchar Ráfaga Láser
+      </button>
+    </div>
+
     <div class="card">
       <div class="card-header">
         <span class="title">Música de Combate (BGM Cyberpunk)</span>
         <span class="tag tag-ok">Aprobado</span>
       </div>
-      <p class="desc">Pista Synthwave de 124 BPM en bucle continuo durante la partida.</p>
+      <p class="desc">Pista Synthwave de 124 BPM en bucle continuo a 0.0 dB.</p>
       <button class="btn-play btn-pink" onclick="playFile('preview_bgm.wav')">
-        ▶ Escuchar Música de Fondo
+        ▶ Escuchar Música
       </button>
-    </div>
-
-    <!-- SILENCIADOS -->
-    <h2>🔇 Sonidos Silenciados (Eliminados a Petición)</h2>
-    <div class="card">
-      <p class="desc" style="margin: 0; line-height: 1.6;">
-        • <strong>Impacto/Muerte de proyectil en dron:</strong> Silenciado (para que no sature al eliminar docenas de enemigos).<br>
-        • <strong>Recolección de orbes de XP / Chatarra:</strong> Silenciado (absorción limpia y silenciosa).
-      </p>
     </div>
 
     <a href="index.html" class="back-link">← Jugar Mecha Protocol en Vivo</a>
