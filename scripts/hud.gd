@@ -238,6 +238,17 @@ func show_game_over(final_level: int) -> void:
 	upgrade_panel.visible = false
 	final_level_reached = final_level
 	
+	if final_level < 0:
+		game_over_stats.text = "⚠️ SISTEMA COMPROMETIDO | PROTOCOLO ANULADO"
+		game_over_stats.add_theme_color_override("font_color", Color(1.0, 0.25, 0.25))
+		load_profile()
+		pilot_input.text = current_pilot_name
+		save_pilot_btn.disabled = true
+		status_label.text = "[!] Manipulación de memoria detectada. Puntuación bloqueada."
+		status_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
+		game_over_panel.visible = true
+		return
+	
 	var minutes := int(elapsed_seconds) / 60
 	var seconds := int(elapsed_seconds) % 60
 	game_over_stats.text = "TIEMPO: %02d:%02d   |   NIVEL: %d" % [minutes, seconds, final_level]
@@ -255,7 +266,7 @@ func show_game_over(final_level: int) -> void:
 	submit_score_to_cloud()
 
 func submit_score_to_cloud() -> void:
-	if is_submitting:
+	if is_submitting or final_level_reached < 0:
 		return
 	is_submitting = true
 	save_pilot_btn.disabled = true

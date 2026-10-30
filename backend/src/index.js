@@ -101,6 +101,13 @@ export default {
         const survival_time = parseFloat(body.survival_time) || 0.0;
         const level = parseInt(body.level, 10) || 1;
 
+        if (level <= 0) {
+          return new Response(JSON.stringify({ success: false, error: "Registro denegado: Violación de integridad del cliente." }), {
+            status: 403,
+            headers: corsHeaders
+          });
+        }
+
         if (survival_time <= 0 || survival_time > 86400) {
           return new Response(JSON.stringify({ success: false, error: "Invalid survival time" }), {
             status: 400,

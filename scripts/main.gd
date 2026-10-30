@@ -33,9 +33,6 @@ func _on_upgrade_selected(upgrade_id: String) -> void:
 		"magnet_boost":
 			mecha.magnet_radius += 120.0
 		"repair_hull":
-			mecha.max_health += 25.0
-			mecha.current_health = min(mecha.max_health, mecha.current_health + 50.0)
-			hud.update_health(mecha.current_health, mecha.max_health)
+			mecha.increase_max_health(25.0, 50.0)
 		"emergency_repair":
-			mecha.current_health = min(mecha.max_health, mecha.current_health + 100.0)
-			hud.update_health(mecha.current_health, mecha.max_health)
+			mecha.heal(100.0)
