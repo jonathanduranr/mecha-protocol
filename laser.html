@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laboratorio de Sonidos Láser - Mecha Protocol</title>
+  <title>Simulador de Progresión Láser - Mecha Protocol</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0b0f19;
+      background: #090d16;
       color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 24px 16px;
@@ -15,66 +15,77 @@
       justify-content: center;
     }
     .container {
-      max-width: 480px;
+      max-width: 520px;
       width: 100%;
     }
-    h1 {
+    .badge-top {
+      display: inline-block;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(34, 211, 238, 0.15);
       color: #22d3ee;
-      font-size: 20px;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    h1 {
+      color: #38bdf8;
+      font-size: 22px;
       font-weight: 800;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
       margin-bottom: 6px;
-      text-transform: uppercase;
     }
     p.sub {
       color: #94a3b8;
       font-size: 13px;
-      margin-bottom: 20px;
+      margin-bottom: 22px;
+      line-height: 1.4;
     }
     .card {
-      background: #131b2e;
-      border: 1px solid #1e293b;
+      background: #111827;
+      border: 1px solid #1f2937;
       border-radius: 14px;
       padding: 18px;
       margin-bottom: 16px;
-      transition: border-color 0.2s;
+      transition: all 0.2s;
     }
     .card:hover {
       border-color: #38bdf8;
+      background: #141e33;
     }
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .title {
       font-size: 16px;
       font-weight: 700;
       color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .badge {
+    .tag {
       font-size: 11px;
       padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(34, 211, 238, 0.15);
-      color: #22d3ee;
-      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 6px;
+      font-weight: 600;
     }
+    .tag-lv1 { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+    .tag-lv30 { background: #1e3a8a; color: #93c5fd; border: 1px solid #2563eb; }
+    .tag-lv60 { background: #4c1d95; color: #c4b5fd; border: 1px solid #7c3aed; }
     .desc {
       font-size: 12px;
       color: #94a3b8;
       line-height: 1.4;
       margin-bottom: 14px;
     }
-    .btn-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
     .btn-play {
-      flex: 1;
-      padding: 14px 10px;
+      width: 100%;
+      padding: 14px 12px;
       font-size: 14px;
       font-weight: 700;
       border: none;
@@ -83,26 +94,19 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 8px;
       transition: transform 0.05s, opacity 0.2s;
     }
     .btn-play:active {
-      transform: scale(0.97);
+      transform: scale(0.98);
     }
-    .btn-cyan { background: #06b6d4; color: #042f2e; }
-    .btn-violet { background: #8b5cf6; color: #fff; }
-    .btn-pink { background: #ec4899; color: #fff; }
-    .btn-single {
-      background: #1e293b;
-      color: #cbd5e1;
-      font-size: 12px;
-      flex: 0 0 auto;
-      padding: 0 14px;
-    }
+    .btn-lv1 { background: #10b981; color: #022c22; }
+    .btn-lv30 { background: #3b82f6; color: #fff; }
+    .btn-lv60 { background: #8b5cf6; color: #fff; }
     audio {
       width: 100%;
       height: 40px;
-      margin-top: 6px;
+      margin-top: 10px;
       border-radius: 8px;
     }
     .back-link {
@@ -118,59 +122,56 @@
 </head>
 <body>
   <div class="container">
-    <h1>⚡ Sonidos de Rayo Láser</h1>
-    <p class="sub">Cada botón reproduce una ráfaga de disparos para que se escuche claro y continuo.</p>
+    <span class="badge-top">Haz de Plasma Seleccionado (Opción 1)</span>
+    <h1>Simulación de Progresión de Audio</h1>
+    <p class="sub">Escucha cómo evoluciona el disparo láser desde el inicio de la partida hasta el combate avanzado.</p>
 
-    <!-- Opción 1 -->
+    <!-- Nivel 1 -->
     <div class="card">
       <div class="card-header">
-        <span class="title">1. Haz de Plasma (Beam Rifle)</span>
-        <span class="badge">En el juego</span>
+        <span class="title">🟢 Nivel 1: Cañón Básico</span>
+        <span class="tag tag-lv1">Cadencia Base</span>
       </div>
-      <p class="desc">Rayo concentrado sci-fi moderno. Limpio, penetrante y sin saturación.</p>
-      <div class="btn-row">
-        <button class="btn-play btn-cyan" onclick="playAudio('audio-beam')">
-          ▶ Escuchar Ráfaga (5 tiros)
-        </button>
-      </div>
-      <audio id="audio-beam" controls preload="auto">
-        <source src="demo_beam.wav" type="audio/wav">
+      <p class="desc">1 proyectil frontal cada 0.23 segundos (~4 disparos/segundo). Ritmo táctico, limpio y espaciado para los primeros minutos.</p>
+      <button class="btn-play btn-lv1" onclick="playAudio('audio-lv1')">
+        ▶ Escuchar Nivel 1 (3.2s)
+      </button>
+      <audio id="audio-lv1" controls preload="auto">
+        <source src="level_1.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- Opción 2 -->
+    <!-- Nivel 30 -->
     <div class="card">
       <div class="card-header">
-        <span class="title">2. Blaster Espacial Clásico</span>
+        <span class="title">🔵 Nivel 30: Batería Doble / Triple</span>
+        <span class="tag tag-lv30">Cadencia +75%</span>
       </div>
-      <p class="desc">Efecto retro de cine espacial con "twang" y rebote metálico tipo blaster.</p>
-      <div class="btn-row">
-        <button class="btn-play btn-violet" onclick="playAudio('audio-blaster')">
-          ▶ Escuchar Ráfaga (5 tiros)
-        </button>
-      </div>
-      <audio id="audio-blaster" controls preload="auto">
-        <source src="demo_blaster.wav" type="audio/wav">
+      <p class="desc">Disparo simultáneo con micro-desfase (14ms) y variación orgánica de pitch (~8 disparos/segundo). Sensación de poder sin saturación.</p>
+      <button class="btn-play btn-lv30" onclick="playAudio('audio-lv30')">
+        ▶ Escuchar Nivel 30 (3.2s)
+      </button>
+      <audio id="audio-lv30" controls preload="auto">
+        <source src="level_30.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- Opción 3 -->
+    <!-- Nivel 60 -->
     <div class="card">
       <div class="card-header">
-        <span class="title">3. Pulso Neón Cyberpunk</span>
+        <span class="title">🟣 Nivel 60: Infierno de Plasma (Overdrive)</span>
+        <span class="tag tag-lv60">Cadencia Máxima</span>
       </div>
-      <p class="desc">Sweep sintético con subgraves, sonido denso y futurista estilo Synthwave.</p>
-      <div class="btn-row">
-        <button class="btn-play btn-pink" onclick="playAudio('audio-pulse')">
-          ▶ Escuchar Ráfaga (5 tiros)
-        </button>
-      </div>
-      <audio id="audio-pulse" controls preload="auto">
-        <source src="demo_pulse.wav" type="audio/wav">
+      <p class="desc">Batería cuádruple de cañones a máxima velocidad (~16 disparos/segundo). Fuego continuo fluido tipo rayo Gatling suave con control dinámico de volumen.</p>
+      <button class="btn-play btn-lv60" onclick="playAudio('audio-lv60')">
+        ▶ Escuchar Nivel 60 (3.2s)
+      </button>
+      <audio id="audio-lv60" controls preload="auto">
+        <source src="level_60.wav" type="audio/wav">
       </audio>
     </div>
 
-    <a href="index.html" class="back-link">← Volver al Juego Mecha Protocol</a>
+    <a href="index.html" class="back-link">← Jugar Mecha Protocol</a>
   </div>
 
   <script>
