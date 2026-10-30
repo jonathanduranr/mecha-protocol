@@ -105,6 +105,7 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func fire_weapons(direction: Vector2) -> void:
+	AudioManager.play_laser()
 	var perp := Vector2(-direction.y, direction.x)
 	var spawn_pos := global_position
 	
