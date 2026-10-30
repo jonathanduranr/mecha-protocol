@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogo de Audio - Mecha Protocol</title>
+  <title>Laboratorio de Audio: Colisión y Efectos - Mecha Protocol</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #090d16;
+      background: #080c16;
       color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 24px 16px 40px;
@@ -84,9 +84,11 @@
       border-radius: 6px;
       font-weight: 600;
     }
-    .tag-sfx { background: #1e293b; color: #38bdf8; border: 1px solid #334155; }
-    .tag-bgm { background: #311042; color: #f472b6; border: 1px solid #831843; }
-    .tag-ok { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+    .tag-cyan { background: #083344; color: #22d3ee; border: 1px solid #0891b2; }
+    .tag-amber { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
+    .tag-purple { background: #2e1065; color: #c084fc; border: 1px solid #7e22ce; }
+    .tag-emerald { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+    .tag-rose { background: #4c0519; color: #fb7185; border: 1px solid #e11d48; }
     .desc {
       font-size: 12px;
       color: #94a3b8;
@@ -95,7 +97,7 @@
     }
     .btn-play {
       width: 100%;
-      padding: 13px 12px;
+      padding: 14px 12px;
       font-size: 14px;
       font-weight: 700;
       border: none;
@@ -110,10 +112,9 @@
     .btn-play:active { transform: scale(0.98); }
     .btn-cyan { background: #06b6d4; color: #042f2e; }
     .btn-amber { background: #f59e0b; color: #1c1917; }
-    .btn-red { background: #ef4444; color: #fff; }
-    .btn-emerald { background: #10b981; color: #022c22; }
     .btn-purple { background: #8b5cf6; color: #fff; }
-    .btn-pink { background: #ec4899; color: #fff; }
+    .btn-emerald { background: #10b981; color: #022c22; }
+    .btn-rose { background: #f43f5e; color: #fff; }
     audio {
       width: 100%;
       height: 38px;
@@ -133,101 +134,88 @@
 </head>
 <body>
   <div class="container">
-    <span class="badge-top">Audio Manager v1.0</span>
-    <h1>Catálogo Completo de Efectos y Música</h1>
-    <p class="sub">Escucha todos los efectos de sonido activos actualmente en el juego para revisar si quieres conservarlos o modificar alguno.</p>
+    <span class="badge-top">Revisión de Efectos de Sonido</span>
+    <h1>Nuevas Opciones de Colisión y Remasters</h1>
+    <p class="sub">Toca cualquier botón para escuchar los nuevos diseños de sonido. Cada pista dura 2 segundos para sonar de forma clara y sin cortes.</p>
 
-    <h2>🔊 Efectos de Sonido (SFX Activos)</h2>
+    <h2>🛡️ 3 Opciones para la Colisión de Drones</h2>
+    <p class="sub">Reemplaza la explosión tosca cuando un dron enemigo se estrella contra tu Mecha:</p>
 
-    <!-- 1. Disparo Láser (Aprobado) -->
+    <!-- Opción A: Escudo de Fuerza -->
     <div class="card">
       <div class="card-header">
-        <span class="title">1. Disparo Haz de Plasma (sfx_laser)</span>
-        <span class="tag tag-ok">Aprobado</span>
+        <span class="title">Opción A: Escudo de Fuerza (Shield Zap)</span>
+        <span class="tag tag-cyan">Energía Sci-Fi</span>
       </div>
-      <p class="desc">Suena cuando el cañón principal dispara a un dron enemigo. (Muestra: Nivel 1 → Nivel 30 → Nivel 60).</p>
-      <button class="btn-play btn-cyan" onclick="playAudio('audio-lv1')">
-        ▶ Escuchar Disparo (Nivel 1)
+      <p class="desc">Campo electromagnético del Mecha que repele y desintegra el dron con un destello resonante limpio (sin ruido sucio).</p>
+      <button class="btn-play btn-cyan" onclick="playFile('preview_col_shield.wav')">
+        ▶ Escuchar Opción A: Escudo de Fuerza
       </button>
-      <audio id="audio-lv1" controls preload="auto">
-        <source src="level_1.wav" type="audio/wav">
+      <audio controls preload="auto">
+        <source src="preview_col_shield.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- 2. Subida de Nivel -->
+    <!-- Opción B: Impacto Metálico Pesado -->
     <div class="card">
       <div class="card-header">
-        <span class="title">2. Subida de Nivel (sfx_levelup)</span>
-        <span class="tag tag-sfx">Progreso</span>
+        <span class="title">Opción B: Impacto de Blindaje (Hull Clang)</span>
+        <span class="tag tag-amber">Golpe Físico</span>
       </div>
-      <p class="desc">Arpegio sintético ascendente que suena al llenar la barra de XP y abrir el selector de mejoras (repetido 2 veces en la muestra).</p>
-      <button class="btn-play btn-emerald" onclick="playAudio('audio-levelup')">
+      <p class="desc">Impacto metálico sordo y contundente, como si el dron fuera aplastado directamente contra las placas de titanio del mecha.</p>
+      <button class="btn-play btn-amber" onclick="playFile('preview_col_metal.wav')">
+        ▶ Escuchar Opción B: Impacto Metálico
+      </button>
+      <audio controls preload="auto">
+        <source src="preview_col_metal.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <!-- Opción C: Pulso EMP / Descarga -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">Opción C: Sobrecarga Eléctrica (Electro EMP)</span>
+        <span class="tag tag-purple">Cortocircuito</span>
+      </div>
+      <p class="desc">Estallido electrostático rápido con chispa y crujido táctico cuando el dron hace masa y revienta.</p>
+      <button class="btn-play btn-purple" onclick="playFile('preview_col_emp.wav')">
+        ▶ Escuchar Opción C: Pulso EMP
+      </button>
+      <audio controls preload="auto">
+        <source src="preview_col_emp.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <h2>✨ Remaster de los Otros 2 Sonidos (Alto Volumen)</h2>
+    <p class="sub">Se aumentaron el volumen, los armónicos y la presencia para que se escuchen perfectamente en parlantes de móvil y laptop:</p>
+
+    <!-- Subida de Nivel Remaster -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">Subida de Nivel (Level Up Remaster)</span>
+        <span class="tag tag-emerald">Recompensa</span>
+      </div>
+      <p class="desc">Arpegio de 4 notas ascendentes brillantes (C5 → E5 → G5 → C6) estilo victoria futurista al llenar la barra de XP.</p>
+      <button class="btn-play btn-emerald" onclick="playFile('preview_levelup_v2.wav')">
         ▶ Escuchar Subida de Nivel
       </button>
-      <audio id="audio-levelup" controls preload="auto">
-        <source src="preview_levelup.wav" type="audio/wav">
+      <audio controls preload="auto">
+        <source src="preview_levelup_v2.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- 3. Golpe / Daño al Mecha -->
+    <!-- Daño al Mecha Remaster -->
     <div class="card">
       <div class="card-header">
-        <span class="title">3. Daño al Mecha (sfx_mecha_hit)</span>
-        <span class="tag tag-sfx">Combate</span>
+        <span class="title">Daño al Mecha (Mecha Hit Remaster)</span>
+        <span class="tag tag-rose">Alerta</span>
       </div>
-      <p class="desc">Impacto metálico corto cuando el Mecha recibe daño (por proyectiles enemigos o contacto). Repetido 3 veces en la muestra.</p>
-      <button class="btn-play btn-amber" onclick="playAudio('audio-hit')">
+      <p class="desc">Impacto de blindaje con advertencia táctica grave y crujido seco, con mucha más pegada y ganancia.</p>
+      <button class="btn-play btn-rose" onclick="playFile('preview_mecha_hit_v2.wav')">
         ▶ Escuchar Daño al Mecha
       </button>
-      <audio id="audio-hit" controls preload="auto">
-        <source src="preview_mecha_hit.wav" type="audio/wav">
-      </audio>
-    </div>
-
-    <!-- 4. Choque / Colisión de Dron (Ram Explosion) -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">4. Colisión Directa contra el Mecha (sfx_ram_explosion)</span>
-        <span class="tag tag-sfx">Impacto Fuerte</span>
-      </div>
-      <p class="desc">Explosión grave y contundente que suena únicamente cuando un dron se estrella directamente contra tu Mecha (repetido 2 veces en la muestra).</p>
-      <button class="btn-play btn-red" onclick="playAudio('audio-ram')">
-        ▶ Escuchar Colisión de Dron
-      </button>
-      <audio id="audio-ram" controls preload="auto">
-        <source src="preview_ram_explosion.wav" type="audio/wav">
-      </audio>
-    </div>
-
-    <!-- 5. Game Over -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">5. Derrota / Game Over (sfx_gameover)</span>
-        <span class="tag tag-sfx">Fin de Partida</span>
-      </div>
-      <p class="desc">Caída dramática de energía ("power down") cuando la salud del Mecha llega a cero.</p>
-      <button class="btn-play btn-purple" onclick="playAudio('audio-gameover')">
-        ▶ Escuchar Game Over
-      </button>
-      <audio id="audio-gameover" controls preload="auto">
-        <source src="preview_gameover.wav" type="audio/wav">
-      </audio>
-    </div>
-
-    <h2>🎵 Música de Fondo (BGM)</h2>
-
-    <!-- 6. Música Cyberpunk -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">6. Música de Combate (bgm_combat)</span>
-        <span class="tag tag-bgm">Loop 124 BPM</span>
-      </div>
-      <p class="desc">Pista Synthwave / Cyberpunk de 31 segundos en bucle continuo durante la partida.</p>
-      <button class="btn-play btn-pink" onclick="playAudio('audio-bgm')">
-        ▶ Escuchar Música de Fondo
-      </button>
-      <audio id="audio-bgm" controls preload="auto">
-        <source src="preview_bgm.wav" type="audio/wav">
+      <audio controls preload="auto">
+        <source src="preview_mecha_hit_v2.wav" type="audio/wav">
       </audio>
     </div>
 
@@ -235,17 +223,14 @@
   </div>
 
   <script>
-    function playAudio(id) {
-      const audios = document.querySelectorAll('audio');
-      audios.forEach(a => {
-        a.pause();
-        a.currentTime = 0;
-      });
-      const target = document.getElementById(id);
-      if (target) {
-        target.currentTime = 0;
-        target.play();
+    let currentAudio = null;
+    function playFile(filename) {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
       }
+      currentAudio = new Audio(filename);
+      currentAudio.play().catch(e => console.error("Playback error:", e));
     }
   </script>
 </body>
