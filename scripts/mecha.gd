@@ -12,7 +12,18 @@ signal mecha_destroyed(final_level: int)
 @export var danger_radius: float = 170.0
 @export var magnet_radius: float = 240.0
 
-var current_health: float
+# 🪤 Trampa para escaneo de memoria (Honeypot Decoy)
+# Los scripts como HEAPF64 buscarán esta variable de 120.0 para congelarla.
+@export var current_health: float = 120.0
+var _honeypot_last: float = 120.0
+
+# 🛡️ Almacenamiento seguro ofuscado en memoria RAM
+var _mask_key: float = 0.0
+var _damage_accumulated: float = 0.0
+var _max_health_masked: float = 0.0
+var _is_security_tripped: bool = false
+var _tamper_check_timer: float = 0.0
+
 var current_xp: int = 0
 var xp_needed: int = 35
 var level: int = 1
@@ -29,16 +40,34 @@ var speed_multiplier: float = 1.0
 @onready var bullet_scene := preload("res://scenes/bullet.tscn")
 
 func _ready() -> void:
+	# Inicializar sistema seguro ofuscado con clave aleatoria
+	_mask_key = randf_range(13579.2, 98765.4)
+	_max_health_masked = max_health + _mask_key
+	_damage_accumulated = 0.0
+	
 	current_health = max_health
+	_honeypot_last = current_health
+	
 	collision_layer = 1  # Layer 1: Mecha
 	collision_mask = 2   # Layer 2: Enemies
 	area_entered.connect(_on_area_entered)
-	emit_signal("health_changed", current_health, max_health)
+	emit_signal("health_changed", get_real_health(), max_health)
 	emit_signal("xp_changed", current_xp, xp_needed, level)
 
 func _physics_process(delta: float) -> void:
 	if damage_cooldown > 0:
 		damage_cooldown -= delta
+
+	# Chequeo periódico de integridad de memoria RAM (Detección de congelamiento HEAPF64)
+	_tamper_check_timer -= delta
+	if _tamper_check_timer <= 0.0:
+		_tamper_check_timer = 0.1  # 10 veces por segundo
+		if not _is_security_tripped:
+			var real_hp := get_real_health()
+			# Si un script forzó externamente `current_health` en 120 mientras el valor real decayó:
+			if abs(current_health - real_hp) > 0.5:
+				_trigger_security_violation("Discrepancia en comprobación de integridad HEAP")
+				return
 		
 	# 1. IA DE SUPERVIVENCIA Y NAVEGACIÓN
 	var desired_direction: Vector2 = calculate_steering_direction()
@@ -236,15 +265,61 @@ func calculate_xp_needed(lvl: int) -> int:
 		var bonus := pow(float(lvl - 10), 1.7) * 20.0
 		return int(380 + (lvl * 75) + bonus)
 
-func take_damage(amount: float) -> void:
-	if damage_cooldown > 0:
+func get_real_health() -> float:
+	var real_max := _max_health_masked - _mask_key
+	return max(0.0, real_max - _damage_accumulated)
+
+func heal(amount: float) -> void:
+	if _is_security_tripped:
 		return
-	AudioManager.play_mecha_hit()
-	current_health = max(0.0, current_health - amount)
+	_damage_accumulated = max(0.0, _damage_accumulated - amount)
+	var real_hp := get_real_health()
+	current_health = real_hp
+	_honeypot_last = real_hp
+	emit_signal("health_changed", real_hp, max_health)
+
+func increase_max_health(amount: float, heal_amount: float = 0.0) -> void:
+	if _is_security_tripped:
+		return
+	max_health += amount
+	_max_health_masked += amount
+	if heal_amount > 0.0:
+		_damage_accumulated = max(0.0, _damage_accumulated - heal_amount)
+	var real_hp := get_real_health()
+	current_health = real_hp
+	_honeypot_last = real_hp
+	emit_signal("health_changed", real_hp, max_health)
+
+func take_damage(amount: float) -> void:
+	if damage_cooldown > 0 or _is_security_tripped:
+		return
+		
+	# Detección inmediata si un bucle de script en JS congeló o incrementó la trampa
+	if current_health > _honeypot_last + 0.01:
+		_trigger_security_violation("Inyección externa en variable de salud detectada")
+		return
+		
+	# Daño silencioso (el feedback visual de daño parpadea sin saturar sonido)
+	_damage_accumulated += amount
+	var real_hp := get_real_health()
+	
+	current_health = real_hp
+	_honeypot_last = real_hp
 	damage_cooldown = 0.35
-	emit_signal("health_changed", current_health, max_health)
-	if current_health <= 0:
+	emit_signal("health_changed", real_hp, max_health)
+	
+	if real_hp <= 0:
 		emit_signal("mecha_destroyed", level)
+
+func _trigger_security_violation(reason: String) -> void:
+	if _is_security_tripped:
+		return
+	_is_security_tripped = true
+	print_debug("[CENTINELA] VIOLACIÓN DE INTEGRIDAD: ", reason)
+	current_health = 0.0
+	_honeypot_last = 0.0
+	emit_signal("health_changed", 0.0, max_health)
+	emit_signal("mecha_destroyed", -1)
 
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("enemies") and "contact_damage" in area:

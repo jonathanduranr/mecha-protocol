@@ -129,7 +129,7 @@ func play_levelup() -> void:
 	_play_sfx(sfx_levelup, -3.0, 1.0, 1.0)
 
 func play_mecha_hit() -> void:
-	_play_sfx(sfx_mecha_hit, -4.0, 0.90, 1.05)
+	pass # Silenciado según preferencia del usuario (combate limpio)
 
 func play_gameover() -> void:
 	fade_out_bgm(0.6)
