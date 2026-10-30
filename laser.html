@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulador de Progresión Láser - Mecha Protocol</title>
+  <title>Catálogo de Audio - Mecha Protocol</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: #090d16;
       color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 24px 16px;
+      padding: 24px 16px 40px;
       display: flex;
       justify-content: center;
     }
     .container {
-      max-width: 520px;
+      max-width: 540px;
       width: 100%;
     }
     .badge-top {
@@ -36,18 +36,28 @@
       letter-spacing: 0.5px;
       margin-bottom: 6px;
     }
+    h2 {
+      color: #e2e8f0;
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 26px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1e293b;
+    }
     p.sub {
       color: #94a3b8;
       font-size: 13px;
-      margin-bottom: 22px;
+      margin-bottom: 16px;
       line-height: 1.4;
     }
     .card {
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
       transition: all 0.2s;
     }
     .card:hover {
@@ -61,7 +71,7 @@
       margin-bottom: 6px;
     }
     .title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       color: #fff;
       display: flex;
@@ -74,18 +84,18 @@
       border-radius: 6px;
       font-weight: 600;
     }
-    .tag-lv1 { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
-    .tag-lv30 { background: #1e3a8a; color: #93c5fd; border: 1px solid #2563eb; }
-    .tag-lv60 { background: #4c1d95; color: #c4b5fd; border: 1px solid #7c3aed; }
+    .tag-sfx { background: #1e293b; color: #38bdf8; border: 1px solid #334155; }
+    .tag-bgm { background: #311042; color: #f472b6; border: 1px solid #831843; }
+    .tag-ok { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
     .desc {
       font-size: 12px;
       color: #94a3b8;
       line-height: 1.4;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
     .btn-play {
       width: 100%;
-      padding: 14px 12px;
+      padding: 13px 12px;
       font-size: 14px;
       font-weight: 700;
       border: none;
@@ -97,22 +107,23 @@
       gap: 8px;
       transition: transform 0.05s, opacity 0.2s;
     }
-    .btn-play:active {
-      transform: scale(0.98);
-    }
-    .btn-lv1 { background: #10b981; color: #022c22; }
-    .btn-lv30 { background: #3b82f6; color: #fff; }
-    .btn-lv60 { background: #8b5cf6; color: #fff; }
+    .btn-play:active { transform: scale(0.98); }
+    .btn-cyan { background: #06b6d4; color: #042f2e; }
+    .btn-amber { background: #f59e0b; color: #1c1917; }
+    .btn-red { background: #ef4444; color: #fff; }
+    .btn-emerald { background: #10b981; color: #022c22; }
+    .btn-purple { background: #8b5cf6; color: #fff; }
+    .btn-pink { background: #ec4899; color: #fff; }
     audio {
       width: 100%;
-      height: 40px;
+      height: 38px;
       margin-top: 10px;
       border-radius: 8px;
     }
     .back-link {
       display: block;
       text-align: center;
-      margin-top: 24px;
+      margin-top: 28px;
       color: #38bdf8;
       text-decoration: none;
       font-size: 14px;
@@ -122,56 +133,105 @@
 </head>
 <body>
   <div class="container">
-    <span class="badge-top">Haz de Plasma Seleccionado (Opción 1)</span>
-    <h1>Simulación de Progresión de Audio</h1>
-    <p class="sub">Escucha cómo evoluciona el disparo láser desde el inicio de la partida hasta el combate avanzado.</p>
+    <span class="badge-top">Audio Manager v1.0</span>
+    <h1>Catálogo Completo de Efectos y Música</h1>
+    <p class="sub">Escucha todos los efectos de sonido activos actualmente en el juego para revisar si quieres conservarlos o modificar alguno.</p>
 
-    <!-- Nivel 1 -->
+    <h2>🔊 Efectos de Sonido (SFX Activos)</h2>
+
+    <!-- 1. Disparo Láser (Aprobado) -->
     <div class="card">
       <div class="card-header">
-        <span class="title">🟢 Nivel 1: Cañón Básico</span>
-        <span class="tag tag-lv1">Cadencia Base</span>
+        <span class="title">1. Disparo Haz de Plasma (sfx_laser)</span>
+        <span class="tag tag-ok">Aprobado</span>
       </div>
-      <p class="desc">1 proyectil frontal cada 0.23 segundos (~4 disparos/segundo). Ritmo táctico, limpio y espaciado para los primeros minutos.</p>
-      <button class="btn-play btn-lv1" onclick="playAudio('audio-lv1')">
-        ▶ Escuchar Nivel 1 (3.2s)
+      <p class="desc">Suena cuando el cañón principal dispara a un dron enemigo. (Muestra: Nivel 1 → Nivel 30 → Nivel 60).</p>
+      <button class="btn-play btn-cyan" onclick="playAudio('audio-lv1')">
+        ▶ Escuchar Disparo (Nivel 1)
       </button>
       <audio id="audio-lv1" controls preload="auto">
         <source src="level_1.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- Nivel 30 -->
+    <!-- 2. Subida de Nivel -->
     <div class="card">
       <div class="card-header">
-        <span class="title">🔵 Nivel 30: Batería Doble / Triple</span>
-        <span class="tag tag-lv30">Cadencia +75%</span>
+        <span class="title">2. Subida de Nivel (sfx_levelup)</span>
+        <span class="tag tag-sfx">Progreso</span>
       </div>
-      <p class="desc">Disparo simultáneo con micro-desfase (14ms) y variación orgánica de pitch (~8 disparos/segundo). Sensación de poder sin saturación.</p>
-      <button class="btn-play btn-lv30" onclick="playAudio('audio-lv30')">
-        ▶ Escuchar Nivel 30 (3.2s)
+      <p class="desc">Arpegio sintético ascendente que suena al llenar la barra de XP y abrir el selector de mejoras (repetido 2 veces en la muestra).</p>
+      <button class="btn-play btn-emerald" onclick="playAudio('audio-levelup')">
+        ▶ Escuchar Subida de Nivel
       </button>
-      <audio id="audio-lv30" controls preload="auto">
-        <source src="level_30.wav" type="audio/wav">
+      <audio id="audio-levelup" controls preload="auto">
+        <source src="preview_levelup.wav" type="audio/wav">
       </audio>
     </div>
 
-    <!-- Nivel 60 -->
+    <!-- 3. Golpe / Daño al Mecha -->
     <div class="card">
       <div class="card-header">
-        <span class="title">🟣 Nivel 60: Infierno de Plasma (Overdrive)</span>
-        <span class="tag tag-lv60">Cadencia Máxima</span>
+        <span class="title">3. Daño al Mecha (sfx_mecha_hit)</span>
+        <span class="tag tag-sfx">Combate</span>
       </div>
-      <p class="desc">Batería cuádruple de cañones a máxima velocidad (~16 disparos/segundo). Fuego continuo fluido tipo rayo Gatling suave con control dinámico de volumen.</p>
-      <button class="btn-play btn-lv60" onclick="playAudio('audio-lv60')">
-        ▶ Escuchar Nivel 60 (3.2s)
+      <p class="desc">Impacto metálico corto cuando el Mecha recibe daño (por proyectiles enemigos o contacto). Repetido 3 veces en la muestra.</p>
+      <button class="btn-play btn-amber" onclick="playAudio('audio-hit')">
+        ▶ Escuchar Daño al Mecha
       </button>
-      <audio id="audio-lv60" controls preload="auto">
-        <source src="level_60.wav" type="audio/wav">
+      <audio id="audio-hit" controls preload="auto">
+        <source src="preview_mecha_hit.wav" type="audio/wav">
       </audio>
     </div>
 
-    <a href="index.html" class="back-link">← Jugar Mecha Protocol</a>
+    <!-- 4. Choque / Colisión de Dron (Ram Explosion) -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">4. Colisión Directa contra el Mecha (sfx_ram_explosion)</span>
+        <span class="tag tag-sfx">Impacto Fuerte</span>
+      </div>
+      <p class="desc">Explosión grave y contundente que suena únicamente cuando un dron se estrella directamente contra tu Mecha (repetido 2 veces en la muestra).</p>
+      <button class="btn-play btn-red" onclick="playAudio('audio-ram')">
+        ▶ Escuchar Colisión de Dron
+      </button>
+      <audio id="audio-ram" controls preload="auto">
+        <source src="preview_ram_explosion.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <!-- 5. Game Over -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">5. Derrota / Game Over (sfx_gameover)</span>
+        <span class="tag tag-sfx">Fin de Partida</span>
+      </div>
+      <p class="desc">Caída dramática de energía ("power down") cuando la salud del Mecha llega a cero.</p>
+      <button class="btn-play btn-purple" onclick="playAudio('audio-gameover')">
+        ▶ Escuchar Game Over
+      </button>
+      <audio id="audio-gameover" controls preload="auto">
+        <source src="preview_gameover.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <h2>🎵 Música de Fondo (BGM)</h2>
+
+    <!-- 6. Música Cyberpunk -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">6. Música de Combate (bgm_combat)</span>
+        <span class="tag tag-bgm">Loop 124 BPM</span>
+      </div>
+      <p class="desc">Pista Synthwave / Cyberpunk de 31 segundos en bucle continuo durante la partida.</p>
+      <button class="btn-play btn-pink" onclick="playAudio('audio-bgm')">
+        ▶ Escuchar Música de Fondo
+      </button>
+      <audio id="audio-bgm" controls preload="auto">
+        <source src="preview_bgm.wav" type="audio/wav">
+      </audio>
+    </div>
+
+    <a href="index.html" class="back-link">← Volver al Juego Mecha Protocol</a>
   </div>
 
   <script>
