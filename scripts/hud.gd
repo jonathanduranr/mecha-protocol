@@ -163,6 +163,7 @@ func show_alert(text: String) -> void:
 		tween.tween_callback(func(): alert_label.visible = false)
 
 func show_upgrade_choices(current_level: int) -> void:
+	AudioManager.stop_ultimate_beam()
 	get_tree().paused = true
 	upgrade_panel.visible = true
 	
@@ -181,8 +182,8 @@ func show_upgrade_choices(current_level: int) -> void:
 	if upgrade_levels.get("multi_shot", 1) >= MAX_UPGRADE_LEVEL and not has_ultimate_beam_unlocked:
 		var ultimate_opt := {
 			"id": "ultimate_beam",
-			"title": "ULTIMATE: Prisma Tridireccional",
-			"desc": "EVOLUCIÓN SUPREMA: Despliega 3 colosales rayos continuos en abanico que barren la arena frontal y lateralmente.",
+			"title": "ULTIMATE: Haz Eléctrico",
+			"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en un rayo continuo con arcos de plasma eléctrico perforante.",
 			"color": Color(1.0, 0.85, 0.2),
 			"is_ultimate": true
 		}
@@ -661,6 +662,7 @@ func generate_uuid() -> String:
 	]
 
 func _on_restart_pressed() -> void:
+	AudioManager.stop_ultimate_beam()
 	AudioManager.play_bgm()
 	get_tree().paused = false
 	get_tree().reload_current_scene()

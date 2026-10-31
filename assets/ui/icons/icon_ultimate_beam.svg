@@ -1,22 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="12" fill="#181204" stroke="#fbbf24" stroke-width="2.5"/>
-  <!-- Rayo central -->
-  <line x1="12" y1="32" x2="56" y2="32" stroke="#f59e0b" stroke-width="10" stroke-linecap="round" opacity="0.4"/>
-  <line x1="12" y1="32" x2="56" y2="32" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
-  <line x1="12" y1="32" x2="56" y2="32" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-  <!-- Rayo superior en ángulo -->
-  <line x1="14" y1="28" x2="52" y2="12" stroke="#f59e0b" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
-  <line x1="14" y1="28" x2="52" y2="12" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
-  <line x1="14" y1="28" x2="52" y2="12" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
-  <!-- Rayo inferior en ángulo -->
-  <line x1="14" y1="36" x2="52" y2="52" stroke="#f59e0b" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
-  <line x1="14" y1="36" x2="52" y2="52" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
-  <line x1="14" y1="36" x2="52" y2="52" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
-  <!-- Prisma emisor central -->
-  <polygon points="8,20 18,32 8,44 14,32" fill="#fbbf24"/>
-  <circle cx="18" cy="32" r="3.5" fill="#ffffff"/>
-  <!-- Chispas cuánticas -->
-  <circle cx="50" cy="14" r="2.5" fill="#fbbf24"/>
-  <circle cx="54" cy="32" r="3.0" fill="#fbbf24"/>
-  <circle cx="50" cy="50" r="2.5" fill="#fbbf24"/>
+  <!-- Halo difuso del rayo -->
+  <line x1="8" y1="32" x2="56" y2="32" stroke="#0284c7" stroke-width="16" stroke-linecap="round" opacity="0.35"/>
+  <!-- Haz continuo principal de plasma -->
+  <line x1="8" y1="32" x2="56" y2="32" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+  <!-- Núcleo blanco de fisión supercaliente -->
+  <line x1="8" y1="32" x2="56" y2="32" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <!-- Rayos y arcos eléctricos serpenteando -->
+  <polyline points="10,32 18,22 26,36 34,20 42,38 50,24 56,32" fill="none" stroke="#67e8f9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="12,32 20,40 28,26 38,42 46,28 54,34" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  <!-- Chispas eléctricas en los picos del arco -->
+  <circle cx="18" cy="22" r="2.5" fill="#fbbf24"/>
+  <circle cx="34" cy="20" r="3.0" fill="#ffffff"/>
+  <circle cx="42" cy="38" r="2.5" fill="#fbbf24"/>
+  <circle cx="50" cy="24" r="2.0" fill="#67e8f9"/>
+  <!-- Emisor de prisma mecha -->
+  <polygon points="6,22 14,32 6,42 10,32" fill="#fbbf24"/>
 </svg>

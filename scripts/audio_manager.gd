@@ -9,8 +9,11 @@ var sfx_scrap: AudioStream = load("res://assets/audio/sfx_scrap.wav")
 var sfx_levelup: AudioStream = load("res://assets/audio/sfx_levelup.wav")
 var sfx_mecha_hit: AudioStream = load("res://assets/audio/sfx_mecha_hit.wav")
 var sfx_gameover: AudioStream = load("res://assets/audio/sfx_gameover.wav")
+var sfx_ultimate_beam: AudioStream = load("res://assets/audio/sfx_ultimate_beam.wav")
 
 var bgm_player: AudioStreamPlayer
+var ultimate_beam_player: AudioStreamPlayer
+var is_ultimate_beam_active: bool = false
 var sfx_pool: Array[AudioStreamPlayer] = []
 const POOL_SIZE: int = 12
 var pool_index: int = 0
@@ -42,6 +45,14 @@ func _ready() -> void:
 		p.bus = "Master"
 		add_child(p)
 		sfx_pool.append(p)
+		
+	# Configurar reproductor continuo para el rayo Ultimate
+	ultimate_beam_player = AudioStreamPlayer.new()
+	ultimate_beam_player.bus = "Master"
+	ultimate_beam_player.stream = sfx_ultimate_beam
+	ultimate_beam_player.volume_db = -11.5
+	ultimate_beam_player.finished.connect(_on_ultimate_beam_finished)
+	add_child(ultimate_beam_player)
 		
 	# Intentar reproducir de inmediato (si la plataforma lo permite)
 	play_bgm()
@@ -133,5 +144,24 @@ func play_mecha_hit() -> void:
 	pass # Silenciado según preferencia del usuario (combate limpio)
 
 func play_gameover() -> void:
+	stop_ultimate_beam()
 	fade_out_bgm(0.6)
 	_play_sfx(sfx_gameover, -7.0, 1.0, 1.0)
+
+func _on_ultimate_beam_finished() -> void:
+	if is_sfx_enabled and is_instance_valid(ultimate_beam_player) and is_ultimate_beam_active:
+		ultimate_beam_player.volume_db = -11.5
+		ultimate_beam_player.play()
+
+func start_ultimate_beam() -> void:
+	if not is_sfx_enabled or ultimate_beam_player == null:
+		return
+	is_ultimate_beam_active = true
+	if not ultimate_beam_player.playing:
+		ultimate_beam_player.volume_db = -11.5
+		ultimate_beam_player.play()
+
+func stop_ultimate_beam() -> void:
+	is_ultimate_beam_active = false
+	if ultimate_beam_player != null and ultimate_beam_player.playing:
+		ultimate_beam_player.stop()
