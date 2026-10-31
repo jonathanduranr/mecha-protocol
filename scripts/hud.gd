@@ -189,38 +189,94 @@ func show_upgrade_choices(current_level: int) -> void:
 	
 	for opt in selected:
 		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(550, 105)
-		btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		
-		var title_line: String = ""
-		if opt["id"] == "emergency_repair":
-			title_line = "⚡ %s" % opt["title"]
-		else:
-			var next_lvl: int = upgrade_levels.get(opt["id"], 0) + 1
-			title_line = "⚡ %s Nv %d/%d" % [opt["title"], next_lvl, MAX_UPGRADE_LEVEL]
-			
-		btn.text = "%s\n%s" % [title_line, opt["desc"]]
-		btn.add_theme_font_size_override("font_size", 17)
+		btn.custom_minimum_size = Vector2(560, 110)
+		btn.text = ""
 		
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color(0.08, 0.12, 0.18, 0.95)
+		style.bg_color = Color(0.07, 0.10, 0.16, 0.95)
 		style.border_width_bottom = 2
 		style.border_width_top = 2
-		style.border_width_left = 4
+		style.border_width_left = 5
 		style.border_width_right = 2
 		style.border_color = opt["color"]
 		style.corner_radius_top_left = 8
 		style.corner_radius_bottom_right = 8
-		style.content_margin_left = 20.0
-		style.content_margin_right = 20.0
-		style.content_margin_top = 12.0
-		style.content_margin_bottom = 12.0
 		btn.add_theme_stylebox_override("normal", style)
 		
-		var hover_style = style.duplicate()
-		hover_style.bg_color = Color(0.14, 0.20, 0.30, 0.98)
+		var hover_style: StyleBoxFlat = style.duplicate()
+		hover_style.bg_color = Color(0.12, 0.18, 0.28, 0.98)
+		hover_style.border_color = opt["color"].lightened(0.2)
 		btn.add_theme_stylebox_override("hover", hover_style)
 		btn.add_theme_stylebox_override("pressed", hover_style)
+		
+		var margin_c := MarginContainer.new()
+		margin_c.set_anchors_preset(Control.PRESET_FULL_RECT)
+		margin_c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		margin_c.add_theme_constant_override("margin_left", 18)
+		margin_c.add_theme_constant_override("margin_right", 18)
+		margin_c.add_theme_constant_override("margin_top", 12)
+		margin_c.add_theme_constant_override("margin_bottom", 12)
+		btn.add_child(margin_c)
+		
+		var hbox := HBoxContainer.new()
+		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_theme_constant_override("separation", 16)
+		margin_c.add_child(hbox)
+		
+		# Icono vectorial específico del protocolo
+		var icon_path := "res://assets/ui/icons/icon_%s.svg" % opt["id"]
+		var icon_tex: Texture2D = null
+		if ResourceLoader.exists(icon_path):
+			icon_tex = load(icon_path)
+			
+		var icon_rect := TextureRect.new()
+		icon_rect.custom_minimum_size = Vector2(58, 58)
+		icon_rect.texture = icon_tex
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(icon_rect)
+		
+		# Contenedor de Textos
+		var vbox := VBoxContainer.new()
+		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_theme_constant_override("separation", 4)
+		
+		var header_hbox := HBoxContainer.new()
+		header_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		header_hbox.add_theme_constant_override("separation", 8)
+		
+		var title_label := Label.new()
+		title_label.text = opt["title"]
+		title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title_label.add_theme_font_size_override("font_size", 18)
+		title_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+		title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		header_hbox.add_child(title_label)
+		
+		if opt["id"] != "emergency_repair":
+			var next_lvl: int = upgrade_levels.get(opt["id"], 0) + 1
+			var level_label_card := Label.new()
+			level_label_card.text = "Nv %d/%d" % [next_lvl, MAX_UPGRADE_LEVEL]
+			level_label_card.add_theme_font_size_override("font_size", 15)
+			level_label_card.add_theme_color_override("font_color", opt["color"])
+			level_label_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			header_hbox.add_child(level_label_card)
+		
+		vbox.add_child(header_hbox)
+		
+		var desc_label := Label.new()
+		desc_label.text = opt["desc"]
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_label.add_theme_font_size_override("font_size", 14)
+		desc_label.add_theme_color_override("font_color", Color(0.68, 0.78, 0.88))
+		desc_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(desc_label)
+		
+		hbox.add_child(vbox)
 		
 		btn.pressed.connect(_on_card_selected.bind(opt["id"]))
 		cards_container.add_child(btn)
@@ -239,7 +295,7 @@ func show_game_over(final_level: int) -> void:
 	final_level_reached = final_level
 	
 	if final_level < 0:
-		game_over_stats.text = "⚠️ SISTEMA COMPROMETIDO | PROTOCOLO ANULADO"
+		game_over_stats.text = "[!] SISTEMA COMPROMETIDO | PROTOCOLO ANULADO"
 		game_over_stats.add_theme_color_override("font_color", Color(1.0, 0.25, 0.25))
 		load_profile()
 		pilot_input.text = current_pilot_name
