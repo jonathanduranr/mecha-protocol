@@ -30,6 +30,7 @@ func _on_upgrade_selected(upgrade_id: String) -> void:
 			mecha.damage_multiplier += 0.25
 		"fire_rate":
 			mecha.fire_rate = max(0.08, mecha.fire_rate * 0.78)
+			mecha.fire_rate_level += 1
 		"speed_boost":
 			mecha.speed_multiplier += 0.20
 		"magnet_boost":

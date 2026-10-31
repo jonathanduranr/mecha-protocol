@@ -252,7 +252,12 @@ func show_upgrade_choices(current_level: int) -> void:
 		}
 		selected.append(emergency_opt)
 	
-	for opt in selected:
+	for raw_opt in selected:
+		var opt: Dictionary = raw_opt.duplicate()
+		if opt["id"] == "fire_rate" and unlocked_ultimates.get("ultimate_beam", false):
+			opt["title"] = "Frecuencia de Resonancia"
+			opt["desc"] = "+25% Ticks/seg y +15% Rango y Amplitud eléctrica en los 3 haces"
+
 		var is_ult: bool = opt.get("is_ultimate", false)
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(560, 110)
