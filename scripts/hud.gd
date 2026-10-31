@@ -43,6 +43,7 @@ var best_level: int = 1
 var is_submitting: bool = false
 
 const MAX_UPGRADE_LEVEL: int = 10
+var has_ultimate_beam_unlocked: bool = false
 var upgrade_levels: Dictionary = {
 	"multi_shot": 1,
 	"damage_boost": 1,
@@ -174,12 +175,34 @@ func show_upgrade_choices(current_level: int) -> void:
 		var cur_lvl: int = upgrade_levels.get(opt["id"], 1)
 		if cur_lvl < MAX_UPGRADE_LEVEL:
 			available_pool.append(opt)
+
+	# Si la Batería de Cañones (multi_shot) llegó a Nv. 10 y no se ha desbloqueado el Ultimate, se ofrece la Evolución
+	var should_force_ultimate := false
+	if upgrade_levels.get("multi_shot", 1) >= MAX_UPGRADE_LEVEL and not has_ultimate_beam_unlocked:
+		var ultimate_opt := {
+			"id": "ultimate_beam",
+			"title": "ULTIMATE: Haz Cuántico",
+			"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en un rayo continuo que calcina todo en línea recta.",
+			"color": Color(1.0, 0.85, 0.2),
+			"is_ultimate": true
+		}
+		available_pool.append(ultimate_opt)
+		should_force_ultimate = true
 			
 	available_pool.shuffle()
-	var count_to_show: int = min(available_pool.size(), 3)
-	var selected := available_pool.slice(0, count_to_show)
 	
-	# Si ya maxeó todos los poderes a Nv. 10, ofrecer Reparación de Emergencia
+	var selected: Array = []
+	if should_force_ultimate:
+		for item in available_pool:
+			if item.get("id") == "ultimate_beam":
+				selected.append(item)
+				available_pool.erase(item)
+				break
+
+	var remaining_count: int = min(available_pool.size(), 3 - selected.size())
+	selected.append_array(available_pool.slice(0, remaining_count))
+	
+	# Si ya maxeó todos los poderes a Nv. 10 y tiene el Ultimate, ofrecer Reparación de Emergencia
 	if selected.is_empty():
 		var emergency_opt := {
 			"id": "emergency_repair",
@@ -190,23 +213,24 @@ func show_upgrade_choices(current_level: int) -> void:
 		selected.append(emergency_opt)
 	
 	for opt in selected:
+		var is_ult: bool = opt.get("is_ultimate", false)
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(560, 110)
 		btn.text = ""
 		
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color(0.07, 0.10, 0.16, 0.95)
-		style.border_width_bottom = 2
-		style.border_width_top = 2
-		style.border_width_left = 5
-		style.border_width_right = 2
+		style.bg_color = Color(0.16, 0.12, 0.04, 0.96) if is_ult else Color(0.07, 0.10, 0.16, 0.95)
+		style.border_width_bottom = 3 if is_ult else 2
+		style.border_width_top = 3 if is_ult else 2
+		style.border_width_left = 6 if is_ult else 5
+		style.border_width_right = 3 if is_ult else 2
 		style.border_color = opt["color"]
 		style.corner_radius_top_left = 8
 		style.corner_radius_bottom_right = 8
 		btn.add_theme_stylebox_override("normal", style)
 		
 		var hover_style: StyleBoxFlat = style.duplicate()
-		hover_style.bg_color = Color(0.12, 0.18, 0.28, 0.98)
+		hover_style.bg_color = Color(0.22, 0.17, 0.06, 0.98) if is_ult else Color(0.12, 0.18, 0.28, 0.98)
 		hover_style.border_color = opt["color"].lightened(0.2)
 		btn.add_theme_stylebox_override("hover", hover_style)
 		btn.add_theme_stylebox_override("pressed", hover_style)
@@ -259,7 +283,14 @@ func show_upgrade_choices(current_level: int) -> void:
 		title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		header_hbox.add_child(title_label)
 		
-		if opt["id"] != "emergency_repair":
+		if is_ult:
+			var tag_label := Label.new()
+			tag_label.text = "[EVOLUCIÓN ULTIMATE]"
+			tag_label.add_theme_font_size_override("font_size", 13)
+			tag_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+			tag_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			header_hbox.add_child(tag_label)
+		elif opt["id"] != "emergency_repair":
 			var cur_lvl: int = upgrade_levels.get(opt["id"], 1)
 			var next_lvl: int = cur_lvl + 1
 			var level_label_card := Label.new()
@@ -292,7 +323,9 @@ func _on_card_selected(upgrade_id: String) -> void:
 		if child is Button:
 			child.disabled = true
 			
-	if upgrade_id != "emergency_repair":
+	if upgrade_id == "ultimate_beam":
+		has_ultimate_beam_unlocked = true
+	elif upgrade_id != "emergency_repair":
 		var cur: int = upgrade_levels.get(upgrade_id, 1)
 		upgrade_levels[upgrade_id] = min(cur + 1, MAX_UPGRADE_LEVEL)
 		

@@ -37,6 +37,14 @@ var bullet_count: int = 1
 var damage_multiplier: float = 1.0
 var speed_multiplier: float = 1.0
 
+# Evolución Ultimate: Haz de Fisión Cuántica Continuo
+var has_ultimate_beam: bool = false
+var is_beam_firing: bool = false
+var beam_tick_timer: float = 0.0
+var beam_sound_timer: float = 0.0
+const BEAM_LENGTH: float = 950.0
+const BEAM_HALF_WIDTH: float = 18.0
+
 @onready var bullet_scene := preload("res://scenes/bullet.tscn")
 
 func _ready() -> void:
@@ -90,10 +98,16 @@ func _physics_process(delta: float) -> void:
 		var aim_dir := (closest_enemy.global_position - global_position).normalized()
 		rotation = lerp_angle(rotation, aim_dir.angle(), 14.0 * delta)
 		
-		if shoot_timer <= 0:
-			fire_weapons(aim_dir)
-			shoot_timer = fire_rate
+		if has_ultimate_beam:
+			is_beam_firing = true
+			process_ultimate_beam(delta, aim_dir)
+		else:
+			is_beam_firing = false
+			if shoot_timer <= 0:
+				fire_weapons(aim_dir)
+				shoot_timer = fire_rate
 	else:
+		is_beam_firing = false
 		if current_velocity.length_squared() > 900.0:
 			rotation = lerp_angle(rotation, current_velocity.angle(), 8.0 * delta)
 		else:
@@ -133,6 +147,42 @@ func spawn_bullet(pos: Vector2, dir: Vector2) -> void:
 	bullet.global_position = pos
 	bullet.damage = 30.0 * damage_multiplier
 	get_parent().add_child(bullet)
+
+func activate_ultimate_beam() -> void:
+	has_ultimate_beam = true
+	queue_redraw()
+
+func process_ultimate_beam(delta: float, aim_dir: Vector2) -> void:
+	beam_tick_timer -= delta
+	beam_sound_timer -= delta
+	
+	# Sonido continuo o pulsos rítmicos del haz de energía
+	if beam_sound_timer <= 0.0:
+		AudioManager.play_laser()
+		beam_sound_timer = 0.16
+		
+	# Procesamiento de daño continuo por ticks (15 ticks/seg)
+	if beam_tick_timer <= 0.0:
+		beam_tick_timer = 0.065
+		var beam_start: Vector2 = global_position + aim_dir * 18.0
+		var tick_damage: float = 38.0 * damage_multiplier
+		
+		var enemies := get_tree().get_nodes_in_group("enemies")
+		for enemy in enemies:
+			if not is_instance_valid(enemy):
+				continue
+			var to_enemy: Vector2 = enemy.global_position - beam_start
+			var proj: float = to_enemy.dot(aim_dir)
+			if proj >= 0.0 and proj <= BEAM_LENGTH:
+				var closest_pt: Vector2 = beam_start + aim_dir * proj
+				var enemy_radius: float = 18.0
+				var col_shape = enemy.get_node_or_null("CollisionShape2D")
+				if col_shape and col_shape.shape is CircleShape2D:
+					enemy_radius = col_shape.shape.radius
+					
+				var hit_dist := enemy_radius + BEAM_HALF_WIDTH
+				if enemy.global_position.distance_squared_to(closest_pt) <= hit_dist * hit_dist:
+					enemy.take_damage(tick_damage, aim_dir, 35.0)
 
 func calculate_steering_direction() -> Vector2:
 	var avoidance_force := Vector2.ZERO
@@ -329,7 +379,27 @@ func _on_area_entered(area: Area2D) -> void:
 			area.on_rammed_mecha()
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, 24.0, Color(0.1, 0.8, 1.0, 0.15))
+	# Dibujar el Haz de Fisión Cuántica Continuo si está activo
+	if has_ultimate_beam and is_beam_firing:
+		var start_pt := Vector2(20, 0)
+		var end_pt := Vector2(BEAM_LENGTH, 0)
+		
+		# 1. Halo difuso exterior
+		draw_line(start_pt, end_pt, Color(0.05, 0.65, 1.0, 0.3), 26.0)
+		# 2. Haz de plasma eléctrico
+		draw_line(start_pt, end_pt, Color(0.3, 0.92, 1.0, 0.85), 13.0)
+		# 3. Núcleo de fisión blanco incandescente
+		draw_line(start_pt, end_pt, Color(1.0, 1.0, 1.0, 1.0), 3.5)
+		
+		# Flares en las dos bocas del cañón
+		draw_circle(Vector2(22, -7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
+		draw_circle(Vector2(22, 7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
+		draw_circle(Vector2(22, -7), 2.5, Color.WHITE)
+		draw_circle(Vector2(22, 7), 2.5, Color.WHITE)
+		draw_circle(Vector2(24, 0), 9.0, Color(0.15, 0.8, 1.0, 0.35))
+
+	var aura_color := Color(1.0, 0.85, 0.2, 0.25) if has_ultimate_beam else Color(0.1, 0.8, 1.0, 0.15)
+	draw_circle(Vector2.ZERO, 25.0, aura_color)
 	
 	var chassis_points := PackedVector2Array([
 		Vector2(16, 0),
@@ -340,10 +410,15 @@ func _draw() -> void:
 		Vector2(8, -14)
 	])
 	draw_colored_polygon(chassis_points, Color(0.12, 0.16, 0.24, 1.0))
-	draw_polyline(chassis_points, Color(0.2, 0.9, 1.0, 1.0), 2.0)
+	var border_color := Color(1.0, 0.85, 0.2, 1.0) if has_ultimate_beam else Color(0.2, 0.9, 1.0, 1.0)
+	draw_polyline(chassis_points, border_color, 2.0)
 	
-	draw_rect(Rect2(12, -9, 10, 4), Color(0.2, 0.9, 1.0, 1.0))
-	draw_rect(Rect2(12, 5, 10, 4), Color(0.2, 0.9, 1.0, 1.0))
+	draw_rect(Rect2(12, -9, 10, 4), border_color)
+	draw_rect(Rect2(12, 5, 10, 4), border_color)
 	
-	draw_circle(Vector2.ZERO, 5.0, Color(1.0, 1.0, 1.0, 0.9))
-	draw_circle(Vector2.ZERO, 3.0, Color(0.1, 0.9, 1.0, 1.0))
+	if has_ultimate_beam:
+		draw_circle(Vector2.ZERO, 6.0, Color(1.0, 0.85, 0.2, 0.9))
+		draw_circle(Vector2.ZERO, 3.5, Color(1.0, 1.0, 1.0, 1.0))
+	else:
+		draw_circle(Vector2.ZERO, 5.0, Color(1.0, 1.0, 1.0, 0.9))
+		draw_circle(Vector2.ZERO, 3.0, Color(0.1, 0.9, 1.0, 1.0))

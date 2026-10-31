@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c7fd5nko831hh"
-path="res://.godot/imported/index.apple-touch-icon.png-829bd6566b1ab329ce6e0fe101c50e36.ctex"
+uid="uid://cypln7e0yjbx8"
+path="res://.godot/imported/icon_ultimate_beam.svg-8eb632618259a6c54edc49583891f91c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://builds/web/index.apple-touch-icon.png"
-dest_files=["res://.godot/imported/index.apple-touch-icon.png-829bd6566b1ab329ce6e0fe101c50e36.ctex"]
+source_file="res://assets/ui/icons/icon_ultimate_beam.svg"
+dest_files=["res://.godot/imported/icon_ultimate_beam.svg-8eb632618259a6c54edc49583891f91c.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#181204" stroke="#fbbf24" stroke-width="2.5"/>
+  <!-- Halo exterior del rayo -->
+  <line x1="8" y1="32" x2="56" y2="32" stroke="#f59e0b" stroke-width="12" stroke-linecap="round" opacity="0.4"/>
+  <!-- Haz principal de plasma -->
+  <line x1="8" y1="32" x2="56" y2="32" stroke="#38bdf8" stroke-width="6" stroke-linecap="round"/>
+  <!-- Núcleo blanco de fisión -->
+  <line x1="8" y1="32" x2="56" y2="32" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Focalizadores de lente cuántica -->
+  <polygon points="12,18 20,32 12,46 16,32" fill="#fbbf24"/>
+  <circle cx="32" cy="32" r="7" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="3 3"/>
+  <circle cx="52" cy="32" r="3.5" fill="#ffffff"/>
+  <!-- Chispas cuánticas -->
+  <polygon points="46,20 48,24 52,24 49,27 50,31 46,28 42,31 43,27 40,24 44,24" fill="#fbbf24"/>
+</svg>

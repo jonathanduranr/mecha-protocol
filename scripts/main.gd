@@ -36,3 +36,5 @@ func _on_upgrade_selected(upgrade_id: String) -> void:
 			mecha.increase_max_health(25.0, 50.0)
 		"emergency_repair":
 			mecha.heal(100.0)
+		"ultimate_beam":
+			mecha.activate_ultimate_beam()
