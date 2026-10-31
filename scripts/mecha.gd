@@ -139,36 +139,20 @@ func calculate_steering_direction() -> Vector2:
 	var scrap_force := Vector2.ZERO
 	var boundary_force := Vector2.ZERO
 	
-	var viewport_size := get_viewport_rect().size
-	var center := viewport_size * 0.5
-	var dist_to_center := global_position.distance_to(center)
-	var dir_to_center: Vector2 = (center - global_position).normalized() if dist_to_center > 0.001 else Vector2.ZERO
-	
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var enemy_count_in_danger: int = 0
 	
-	# 1. Evasión de enemigos con sesgo de escape hacia el centro
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or not is_target_on_screen(enemy):
 			continue
 		var dist := global_position.distance_to(enemy.global_position)
 		if dist < danger_radius and dist > 0.01:
 			var push_away: Vector2 = (global_position - enemy.global_position).normalized()
-			var weight: float = (1.0 - (dist / danger_radius)) * 2.5
-			
-			# Si el empuje de huida nos lleva en dirección contraria al centro (hacia esquinas o bordes)
-			# desviamos lateralmente para flanquear y rodear al enemigo buscando el centro
-			var dot_center := push_away.dot(dir_to_center)
-			if dot_center < 0.2:
-				var p1 := Vector2(-push_away.y, push_away.x)
-				var p2 := Vector2(push_away.y, -push_away.x)
-				var flank: Vector2 = p1 if p1.dot(dir_to_center) >= p2.dot(dir_to_center) else p2
-				push_away = (push_away * 0.35 + flank * 0.95 + dir_to_center * 0.85).normalized()
-				
+			var weight: float = (1.0 - (dist / danger_radius)) * 2.2
 			avoidance_force += push_away * weight
 			enemy_count_in_danger += 1
 			
-	# Evasión táctica de proyectiles enemigos orientada al centro
+	# Evasión táctica de proyectiles enemigos
 	var enemy_bullets := get_tree().get_nodes_in_group("enemy_bullets")
 	for b in enemy_bullets:
 		if not is_instance_valid(b):
@@ -176,63 +160,49 @@ func calculate_steering_direction() -> Vector2:
 		var dist_b := global_position.distance_to(b.global_position)
 		if dist_b < 130.0 and dist_b > 0.01:
 			var push_b: Vector2 = (global_position - b.global_position).normalized()
-			var weight_b: float = (1.0 - (dist_b / 130.0)) * 2.8
-			var dot_b_center := push_b.dot(dir_to_center)
-			if dot_b_center < 0.1:
-				var pb1 := Vector2(-push_b.y, push_b.x)
-				var pb2 := Vector2(push_b.y, -push_b.x)
-				var flank_b: Vector2 = pb1 if pb1.dot(dir_to_center) >= pb2.dot(dir_to_center) else pb2
-				push_b = (push_b * 0.4 + flank_b * 1.0 + dir_to_center * 0.7).normalized()
+			var weight_b: float = (1.0 - (dist_b / 130.0)) * 3.0
 			avoidance_force += push_b * weight_b
 			
-	# 2. Atracción hacia Scrap/XP (solo si no compromete la huida hacia esquinas)
+	# 2. Atracción hacia el Scrap/XP más cercano (si no hay peligro extremo)
 	if enemy_count_in_danger < 4:
 		var closest_scrap := get_closest_scrap()
 		if is_instance_valid(closest_scrap):
-			var scrap_pos := closest_scrap.global_position
-			var scrap_dist_to_center := scrap_pos.distance_to(center)
-			# No perseguir scrap lejano hacia los bordes mientras se huye de enemigos
-			if enemy_count_in_danger == 0 or scrap_dist_to_center <= dist_to_center + 60.0:
-				scrap_force = (scrap_pos - global_position).normalized() * 1.8
+			scrap_force = (closest_scrap.global_position - global_position).normalized() * 1.8
 			
-	# 3. PRIORIDAD AL CENTRO DE LA ARENA (Especialmente al buscar espacio para huir)
-	# Cuando hay peligro, la prioridad del centro SUBE para garantizar que el mecha busque espacio abierto y no se encierre
-	var center_weight: float = 1.0
-	if enemy_count_in_danger > 0:
-		center_weight = 2.4 + min(enemy_count_in_danger * 0.5, 2.0)
-		
-	var speed_factor: float = clamp((dist_to_center - 30.0) / 180.0, 0.0, 1.0)
-	var center_force: Vector2 = dir_to_center * speed_factor * center_weight
+	# 3. Retorno instintivo al CENTRO TÁCTICO de la arena (cuando el camino está despejado)
+	var viewport_size := get_viewport_rect().size
+	var center := viewport_size * 0.5
+	var center_force := Vector2.ZERO
+	var dist_to_center := global_position.distance_to(center)
+	
+	if dist_to_center > 30.0:
+		# Cuanto más lejos del centro esté, más deseo tiene de volver al corazón seguro de la arena
+		var center_weight: float = 1.0 if enemy_count_in_danger == 0 else 0.4
+		# Desaceleración suave (ease-out) al aproximarse al centro para evitar sobrepasar y temblar
+		var speed_factor: float = clamp((dist_to_center - 30.0) / 160.0, 0.0, 1.0)
+		center_force = (center - global_position).normalized() * speed_factor * center_weight
 
-	# 4. Repulsión de bordes de la pantalla (zona de seguridad ampliada a 140px)
-	var boundary_margin: float = 140.0
+	# 4. Repulsión de bordes de la pantalla
+	var boundary_margin: float = 55.0
 	
 	if global_position.x < boundary_margin:
 		var factor := (boundary_margin - global_position.x) / boundary_margin
-		boundary_force.x += pow(factor, 1.5) * 3.5
+		boundary_force.x += factor * 2.0
 	elif global_position.x > viewport_size.x - boundary_margin:
 		var factor := (global_position.x - (viewport_size.x - boundary_margin)) / boundary_margin
-		boundary_force.x -= pow(factor, 1.5) * 3.5
+		boundary_force.x -= factor * 2.0
 		
 	if global_position.y < boundary_margin:
 		var factor := (boundary_margin - global_position.y) / boundary_margin
-		boundary_force.y += pow(factor, 1.5) * 3.5
+		boundary_force.y += factor * 2.0
 	elif global_position.y > viewport_size.y - boundary_margin:
 		var factor := (global_position.y - (viewport_size.y - boundary_margin)) / boundary_margin
-		boundary_force.y -= pow(factor, 1.5) * 3.5
-
-	# 5. Expulsión anti-encierro en las 4 esquinas (fuerte impulso diagonal hacia el centro)
-	var corner_force := Vector2.ZERO
-	var corner_margin: float = 160.0
-	var near_x := (global_position.x < corner_margin) or (global_position.x > viewport_size.x - corner_margin)
-	var near_y := (global_position.y < corner_margin) or (global_position.y > viewport_size.y - corner_margin)
-	if near_x and near_y:
-		corner_force = dir_to_center * 2.5
+		boundary_force.y -= factor * 2.0
 
 	# Suma ponderada de fuerzas
-	var total_vector: Vector2 = (avoidance_force * 1.5) + boundary_force + corner_force + (center_force * 1.8) + scrap_force
+	var total_vector: Vector2 = (avoidance_force * 2.0) + scrap_force + boundary_force + (center_force * 1.4)
 	
-	# Frenado absoluto en el centro táctico cuando no hay peligros ni chatarra
+	# Si está en el centro sin enemigos ni chatarra de peligro, frenado absoluto (deadband limpio)
 	if avoidance_force.length_squared() < 0.01 and scrap_force.length_squared() < 0.01 and dist_to_center <= 30.0:
 		return Vector2.ZERO
 		
