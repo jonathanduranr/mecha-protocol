@@ -98,8 +98,10 @@ func _ready() -> void:
 	game_over_panel.visible = false
 	
 	start_button.pressed.connect(_on_start_protocol_pressed)
-	
 	restart_button.pressed.connect(_on_restart_pressed)
+	
+	_setup_button_play_icon(start_button, "JUGAR")
+	_setup_button_play_icon(restart_button, "JUGAR DE NUEVO")
 	save_pilot_btn.pressed.connect(_on_change_name_clicked)
 	pilot_input.gui_input.connect(_on_pilot_input_gui_input)
 	pilot_input.text_submitted.connect(func(text_val): apply_new_pilot_name(text_val))
@@ -262,9 +264,9 @@ func show_upgrade_choices(current_level: int) -> void:
 			var next_lvl: int = cur_lvl + 1
 			var level_label_card := Label.new()
 			if next_lvl >= MAX_UPGRADE_LEVEL:
-				level_label_card.text = "Nv %d → %d (MÁX)" % [cur_lvl, next_lvl]
+				level_label_card.text = "Nv %d -> %d (MÁX)" % [cur_lvl, next_lvl]
 			else:
-				level_label_card.text = "Nv %d → %d" % [cur_lvl, next_lvl]
+				level_label_card.text = "Nv %d -> %d" % [cur_lvl, next_lvl]
 			level_label_card.add_theme_font_size_override("font_size", 15)
 			level_label_card.add_theme_color_override("font_color", opt["color"])
 			level_label_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -629,3 +631,41 @@ func _on_restart_pressed() -> void:
 	AudioManager.play_bgm()
 	get_tree().paused = false
 	get_tree().reload_current_scene()
+
+func _setup_button_play_icon(btn: Button, label_text: String) -> void:
+	btn.text = ""
+	
+	var col: Color = btn.get_theme_color("font_color") if btn.has_theme_color("font_color") else Color(0.3, 1.0, 0.6)
+	var font_sz: int = btn.get_theme_font_size("font_size") if btn.has_theme_font_size("font_size") else 22
+	
+	var hbox := HBoxContainer.new()
+	hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 10)
+	
+	var bracket_left := Label.new()
+	bracket_left.text = "["
+	bracket_left.add_theme_font_size_override("font_size", font_sz)
+	bracket_left.add_theme_color_override("font_color", col)
+	bracket_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(bracket_left)
+	
+	var icon_rect := TextureRect.new()
+	icon_rect.texture = preload("res://assets/ui/icons/icon_play.svg")
+	icon_rect.custom_minimum_size = Vector2(24, 24)
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon_rect.modulate = col
+	hbox.add_child(icon_rect)
+	
+	var text_label := Label.new()
+	text_label.text = label_text + " ]"
+	text_label.add_theme_font_size_override("font_size", font_sz)
+	text_label.add_theme_color_override("font_color", col)
+	text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(text_label)
+	
+	btn.add_child(hbox)

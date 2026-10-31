@@ -330,7 +330,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_font_sizes/font_size = 20
-text = "[ ▶ JUGAR DE NUEVO ]"
+text = "[ JUGAR DE NUEVO ]"
 
 [node name="StartPanel" type="ColorRect" parent="."]
 anchors_preset = 15
@@ -433,7 +433,7 @@ size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_start")
 theme_override_font_sizes/font_size = 26
 theme_override_colors/font_color = Color(0.3, 1.0, 0.6, 1)
-text = "[ ▶ JUGAR ]"
+text = "[ JUGAR ]"
 
 [node name="LeaderboardHTTP" type="HTTPRequest" parent="."]
 timeout = 8.0
