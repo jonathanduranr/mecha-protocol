@@ -164,25 +164,40 @@ func process_ultimate_beam(delta: float, aim_dir: Vector2) -> void:
 	# Procesamiento de daño continuo por ticks (15 ticks/seg)
 	if beam_tick_timer <= 0.0:
 		beam_tick_timer = 0.065
-		var beam_start: Vector2 = global_position + aim_dir * 18.0
-		var tick_damage: float = 38.0 * damage_multiplier
+		var spread_angle := deg_to_rad(24.0)
+		var beam_data := [
+			{"dir": aim_dir, "start": global_position + aim_dir * 20.0, "half_width": BEAM_HALF_WIDTH},
+			{"dir": aim_dir.rotated(-spread_angle), "start": global_position + aim_dir.rotated(-spread_angle) * 18.0, "half_width": BEAM_HALF_WIDTH * 0.9},
+			{"dir": aim_dir.rotated(spread_angle), "start": global_position + aim_dir.rotated(spread_angle) * 18.0, "half_width": BEAM_HALF_WIDTH * 0.9}
+		]
 		
+		var tick_damage: float = 34.0 * damage_multiplier
 		var enemies := get_tree().get_nodes_in_group("enemies")
+		
 		for enemy in enemies:
 			if not is_instance_valid(enemy):
 				continue
-			var to_enemy: Vector2 = enemy.global_position - beam_start
-			var proj: float = to_enemy.dot(aim_dir)
-			if proj >= 0.0 and proj <= BEAM_LENGTH:
-				var closest_pt: Vector2 = beam_start + aim_dir * proj
-				var enemy_radius: float = 18.0
-				var col_shape = enemy.get_node_or_null("CollisionShape2D")
-				if col_shape and col_shape.shape is CircleShape2D:
-					enemy_radius = col_shape.shape.radius
-					
-				var hit_dist := enemy_radius + BEAM_HALF_WIDTH
-				if enemy.global_position.distance_squared_to(closest_pt) <= hit_dist * hit_dist:
-					enemy.take_damage(tick_damage, aim_dir, 35.0)
+				
+			var enemy_pos: Vector2 = enemy.global_position
+			var enemy_radius: float = 18.0
+			var col_shape = enemy.get_node_or_null("CollisionShape2D")
+			if col_shape and col_shape.shape is CircleShape2D:
+				enemy_radius = col_shape.shape.radius
+				
+			# Probar colisión con cualquiera de los 3 haces del prisma
+			for beam in beam_data:
+				var b_dir: Vector2 = beam["dir"]
+				var b_start: Vector2 = beam["start"]
+				var b_half_w: float = beam["half_width"]
+				
+				var to_enemy: Vector2 = enemy_pos - b_start
+				var proj: float = to_enemy.dot(b_dir)
+				if proj >= 0.0 and proj <= BEAM_LENGTH:
+					var closest_pt: Vector2 = b_start + b_dir * proj
+					var hit_dist := enemy_radius + b_half_w
+					if enemy_pos.distance_squared_to(closest_pt) <= hit_dist * hit_dist:
+						enemy.take_damage(tick_damage, b_dir, 35.0)
+						break
 
 func calculate_steering_direction() -> Vector2:
 	var avoidance_force := Vector2.ZERO
@@ -379,24 +394,37 @@ func _on_area_entered(area: Area2D) -> void:
 			area.on_rammed_mecha()
 
 func _draw() -> void:
-	# Dibujar el Haz de Fisión Cuántica Continuo si está activo
+	# Dibujar el Prisma Tridireccional Continuo si está activo
 	if has_ultimate_beam and is_beam_firing:
-		var start_pt := Vector2(20, 0)
-		var end_pt := Vector2(BEAM_LENGTH, 0)
+		var spread := deg_to_rad(24.0)
 		
-		# 1. Halo difuso exterior
-		draw_line(start_pt, end_pt, Color(0.05, 0.65, 1.0, 0.3), 26.0)
-		# 2. Haz de plasma eléctrico
-		draw_line(start_pt, end_pt, Color(0.3, 0.92, 1.0, 0.85), 13.0)
-		# 3. Núcleo de fisión blanco incandescente
-		draw_line(start_pt, end_pt, Color(1.0, 1.0, 1.0, 1.0), 3.5)
+		# 1. Haces laterales gruesos (dibujados primero)
+		var side_beams := [
+			{"start": Vector2(18, -7), "end": Vector2(BEAM_LENGTH, 0).rotated(-spread)},
+			{"start": Vector2(18, 7), "end": Vector2(BEAM_LENGTH, 0).rotated(spread)}
+		]
+		for b in side_beams:
+			# Halo exterior difuso grueso
+			draw_line(b["start"], b["end"], Color(0.05, 0.65, 1.0, 0.28), 22.0)
+			# Haz de plasma medio
+			draw_line(b["start"], b["end"], Color(0.3, 0.92, 1.0, 0.85), 11.0)
+			# Núcleo blanco
+			draw_line(b["start"], b["end"], Color(1.0, 1.0, 1.0, 1.0), 3.0)
+			
+		# 2. Haz central (grueso colosal de 26px)
+		var center_start := Vector2(20, 0)
+		var center_end := Vector2(BEAM_LENGTH, 0)
+		draw_line(center_start, center_end, Color(0.05, 0.65, 1.0, 0.32), 26.0)
+		draw_line(center_start, center_end, Color(0.3, 0.92, 1.0, 0.9), 13.0)
+		draw_line(center_start, center_end, Color(1.0, 1.0, 1.0, 1.0), 3.5)
 		
-		# Flares en las dos bocas del cañón
-		draw_circle(Vector2(22, -7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
-		draw_circle(Vector2(22, 7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
-		draw_circle(Vector2(22, -7), 2.5, Color.WHITE)
-		draw_circle(Vector2(22, 7), 2.5, Color.WHITE)
-		draw_circle(Vector2(24, 0), 9.0, Color(0.15, 0.8, 1.0, 0.35))
+		# 3. Flares de energía en las bocas de cañón y prisma emisor
+		draw_circle(Vector2(20, -7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
+		draw_circle(Vector2(20, 7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
+		draw_circle(Vector2(20, -7), 2.5, Color.WHITE)
+		draw_circle(Vector2(20, 7), 2.5, Color.WHITE)
+		draw_circle(Vector2(24, 0), 10.0, Color(0.15, 0.8, 1.0, 0.4))
+		draw_circle(Vector2(24, 0), 4.0, Color.WHITE)
 
 	var aura_color := Color(1.0, 0.85, 0.2, 0.25) if has_ultimate_beam else Color(0.1, 0.8, 1.0, 0.15)
 	draw_circle(Vector2.ZERO, 25.0, aura_color)

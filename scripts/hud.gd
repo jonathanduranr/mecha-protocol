@@ -181,8 +181,8 @@ func show_upgrade_choices(current_level: int) -> void:
 	if upgrade_levels.get("multi_shot", 1) >= MAX_UPGRADE_LEVEL and not has_ultimate_beam_unlocked:
 		var ultimate_opt := {
 			"id": "ultimate_beam",
-			"title": "ULTIMATE: Haz Cuántico",
-			"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en un rayo continuo que calcina todo en línea recta.",
+			"title": "ULTIMATE: Prisma Tridireccional",
+			"desc": "EVOLUCIÓN SUPREMA: Despliega 3 colosales rayos continuos en abanico que barren la arena frontal y lateralmente.",
 			"color": Color(1.0, 0.85, 0.2),
 			"is_ultimate": true
 		}
