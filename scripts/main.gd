@@ -13,6 +13,8 @@ func _ready() -> void:
 		mecha.level_up.connect(_on_mecha_level_up)
 	if mecha.has_signal("mecha_destroyed"):
 		mecha.mecha_destroyed.connect(hud.show_game_over)
+	if mecha.has_signal("alert_requested"):
+		mecha.alert_requested.connect(hud.show_alert)
 		
 	if hud.has_signal("upgrade_selected"):
 		hud.upgrade_selected.connect(_on_upgrade_selected)
@@ -38,3 +40,11 @@ func _on_upgrade_selected(upgrade_id: String) -> void:
 			mecha.heal(100.0)
 		"ultimate_beam":
 			mecha.activate_ultimate_beam()
+		"ultimate_singularity":
+			mecha.activate_ultimate_singularity()
+		"ultimate_trail":
+			mecha.activate_ultimate_trail()
+		"ultimate_vortex":
+			mecha.activate_ultimate_vortex()
+		"ultimate_aegis":
+			mecha.activate_ultimate_aegis()

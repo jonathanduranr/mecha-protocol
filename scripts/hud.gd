@@ -43,7 +43,52 @@ var best_level: int = 1
 var is_submitting: bool = false
 
 const MAX_UPGRADE_LEVEL: int = 10
-var has_ultimate_beam_unlocked: bool = false
+var unlocked_ultimates: Dictionary = {
+	"ultimate_beam": false,
+	"ultimate_singularity": false,
+	"ultimate_trail": false,
+	"ultimate_vortex": false,
+	"ultimate_aegis": false
+}
+
+var ultimate_definitions := {
+	"multi_shot": {
+		"id": "ultimate_beam",
+		"title": "ULTIMATE: Haz Eléctrico",
+		"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en un rayo continuo con arcos de plasma eléctrico perforante.",
+		"color": Color(1.0, 0.85, 0.2),
+		"is_ultimate": true
+	},
+	"damage_boost": {
+		"id": "ultimate_singularity",
+		"title": "ULTIMATE: Singularidad de Antimateria",
+		"desc": "EVOLUCIÓN SUPREMA: Cada baja genera micro-agujeros negros gravitatorios que succionan y colapsan en implosiones.",
+		"color": Color(1.0, 0.25, 0.4),
+		"is_ultimate": true
+	},
+	"speed_boost": {
+		"id": "ultimate_trail",
+		"title": "ULTIMATE: Estela de Iones Cinética",
+		"desc": "EVOLUCIÓN SUPREMA: Rastro continuo de fuego esmeralda que calcina a los drones que crucen tu camino (+35% Vel).",
+		"color": Color(0.2, 1.0, 0.5),
+		"is_ultimate": true
+	},
+	"magnet_boost": {
+		"id": "ultimate_vortex",
+		"title": "ULTIMATE: Vórtice de Metralla Orbital",
+		"desc": "EVOLUCIÓN SUPREMA: Imán global permanente. La chatarra orbita como sierras cortantes triturando drones antes de absorberse.",
+		"color": Color(0.85, 0.35, 1.0),
+		"is_ultimate": true
+	},
+	"repair_hull": {
+		"id": "ultimate_aegis",
+		"title": "ULTIMATE: Protocolo Fénix & Égida",
+		"desc": "EVOLUCIÓN SUPREMA: Escudo hexagonal reactivo con pulso EMP anti-proyectiles. Si caes a 0 HP, resucitas con invulnerabilidad.",
+		"color": Color(0.2, 1.0, 0.85),
+		"is_ultimate": true
+	}
+}
+
 var upgrade_levels: Dictionary = {
 	"multi_shot": 1,
 	"damage_boost": 1,
@@ -170,40 +215,34 @@ func show_upgrade_choices(current_level: int) -> void:
 	for child in cards_container.get_children():
 		child.queue_free()
 		
-	# Filtrar habilidades que aún no alcanzan el nivel 10
+	# 1. Habilidades normales menores a Nv. 10
 	var available_pool: Array = []
 	for opt in archetype_upgrades:
 		var cur_lvl: int = upgrade_levels.get(opt["id"], 1)
 		if cur_lvl < MAX_UPGRADE_LEVEL:
 			available_pool.append(opt)
 
-	# Si la Batería de Cañones (multi_shot) llegó a Nv. 10 y no se ha desbloqueado el Ultimate, se ofrece la Evolución
-	var should_force_ultimate := false
-	if upgrade_levels.get("multi_shot", 1) >= MAX_UPGRADE_LEVEL and not has_ultimate_beam_unlocked:
-		var ultimate_opt := {
-			"id": "ultimate_beam",
-			"title": "ULTIMATE: Haz Eléctrico",
-			"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en un rayo continuo con arcos de plasma eléctrico perforante.",
-			"color": Color(1.0, 0.85, 0.2),
-			"is_ultimate": true
-		}
-		available_pool.append(ultimate_opt)
-		should_force_ultimate = true
+	# 2. Comprobar Ultimates desbloqueables para habilidades en Nv. 10
+	var pending_ultimates: Array = []
+	for base_id in ultimate_definitions.keys():
+		var ult_data: Dictionary = ultimate_definitions[base_id]
+		var ult_id: String = ult_data["id"]
+		if upgrade_levels.get(base_id, 1) >= MAX_UPGRADE_LEVEL and not unlocked_ultimates.get(ult_id, false):
+			pending_ultimates.append(ult_data)
 			
 	available_pool.shuffle()
+	pending_ultimates.shuffle()
 	
 	var selected: Array = []
-	if should_force_ultimate:
-		for item in available_pool:
-			if item.get("id") == "ultimate_beam":
-				selected.append(item)
-				available_pool.erase(item)
-				break
+	# Priorizar Ultimates para que el jugador los reciba de inmediato tras maxear la habilidad
+	for ult in pending_ultimates:
+		if selected.size() < 3:
+			selected.append(ult)
 
 	var remaining_count: int = min(available_pool.size(), 3 - selected.size())
 	selected.append_array(available_pool.slice(0, remaining_count))
 	
-	# Si ya maxeó todos los poderes a Nv. 10 y tiene el Ultimate, ofrecer Reparación de Emergencia
+	# Si ya maxeó todos los poderes a Nv. 10 y tiene todos los Ultimates, ofrecer Reparación de Emergencia
 	if selected.is_empty():
 		var emergency_opt := {
 			"id": "emergency_repair",
@@ -324,8 +363,8 @@ func _on_card_selected(upgrade_id: String) -> void:
 		if child is Button:
 			child.disabled = true
 			
-	if upgrade_id == "ultimate_beam":
-		has_ultimate_beam_unlocked = true
+	if unlocked_ultimates.has(upgrade_id):
+		unlocked_ultimates[upgrade_id] = true
 	elif upgrade_id != "emergency_repair":
 		var cur: int = upgrade_levels.get(upgrade_id, 1)
 		upgrade_levels[upgrade_id] = min(cur + 1, MAX_UPGRADE_LEVEL)

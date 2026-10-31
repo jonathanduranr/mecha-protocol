@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#04160d" stroke="#34d399" stroke-width="2.5"/>
+  <!-- Rayos de impulso y velocidad -->
+  <line x1="8" y1="20" x2="24" y2="20" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="6" y1="32" x2="22" y2="32" stroke="#34d399" stroke-width="3.5" stroke-linecap="round" opacity="0.8"/>
+  <line x1="10" y1="44" x2="26" y2="44" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <!-- Estela curva de fuego iónico -->
+  <path d="M 16 48 Q 28 32, 44 32 L 56 32" fill="none" stroke="#059669" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+  <path d="M 22 44 Q 32 32, 46 32 L 56 32" fill="none" stroke="#10b981" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 30 38 Q 38 32, 48 32 L 56 32" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <!-- Propulsor del mecha en cabeza -->
+  <polygon points="50,22 58,32 50,42 54,32" fill="#34d399"/>
+  <circle cx="56" cy="32" r="3" fill="#ffffff"/>
+  <!-- Chispas cinéticas -->
+  <circle cx="28" cy="22" r="2" fill="#34d399"/>
+  <circle cx="38" cy="46" r="2.5" fill="#6ee7b7"/>
+</svg>
