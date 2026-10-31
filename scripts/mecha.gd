@@ -40,10 +40,22 @@ var speed_multiplier: float = 1.0
 
 # Evoluciones Ultimate de Arquetipos
 var has_ultimate_beam: bool = false
+var beam_level: int = 0 # 1: 1 rayo frontal, 2: 2 rayos duales, 3: 3 rayos prismáticos
 var is_beam_firing: bool = false
 var beam_tick_timer: float = 0.0
 var electric_anim_time: float = 0.0
 var fire_rate_level: int = 1
+
+func get_beam_angles() -> Array[float]:
+	match beam_level:
+		1:
+			return [0.0]
+		2:
+			return [-deg_to_rad(14.0), deg_to_rad(14.0)]
+		3:
+			return [-deg_to_rad(24.0), 0.0, deg_to_rad(24.0)]
+		_:
+			return [-deg_to_rad(24.0), 0.0, deg_to_rad(24.0)] if beam_level >= 3 else [0.0]
 
 func get_beam_length() -> float:
 	return 950.0 + (fire_rate_level - 1) * 65.0
@@ -197,6 +209,7 @@ func spawn_bullet(pos: Vector2, dir: Vector2) -> void:
 
 func activate_ultimate_beam() -> void:
 	has_ultimate_beam = true
+	beam_level = min(3, beam_level + 1)
 	queue_redraw()
 
 func process_ultimate_beam(delta: float, aim_dir: Vector2) -> void:
@@ -212,7 +225,7 @@ func process_ultimate_beam(delta: float, aim_dir: Vector2) -> void:
 		var tick_damage: float = 32.0 * damage_multiplier
 		var enemies := get_tree().get_nodes_in_group("enemies")
 		var hit_enemies: Dictionary = {}
-		var beam_angles: Array[float] = [-deg_to_rad(24.0), 0.0, deg_to_rad(24.0)]
+		var beam_angles: Array[float] = get_beam_angles()
 		
 		for angle_offset in beam_angles:
 			var current_dir: Vector2 = aim_dir.rotated(angle_offset)
@@ -752,10 +765,10 @@ func _draw() -> void:
 		c.a = w_alpha * c.a
 		draw_arc(wp, w.radius, 0.0, TAU, 36, c, w.width * w_alpha)
 
-	# 2. HAZ CONTINUO DE FISIÓN CUÁNTICA TRIPLE ELÉCTRICO
+	# 2. HAZ CONTINUO DE FISIÓN CUÁNTICA PROGRESIVO (1 A 3 HACES)
 	if has_ultimate_beam and is_beam_firing:
 		var current_beam_len: float = get_beam_length()
-		var beam_angles: Array[float] = [-deg_to_rad(24.0), 0.0, deg_to_rad(24.0)]
+		var beam_angles: Array[float] = get_beam_angles()
 		
 		var glow_w: float = 24.0 + (fire_rate_level - 1) * 2.4
 		var core_w: float = 12.0 + (fire_rate_level - 1) * 1.4

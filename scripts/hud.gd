@@ -43,6 +43,7 @@ var best_level: int = 1
 var is_submitting: bool = false
 
 const MAX_UPGRADE_LEVEL: int = 10
+var beam_level: int = 0 # 1: 1 rayo, 2: 2 rayos, 3: 3 rayos
 var unlocked_ultimates: Dictionary = {
 	"ultimate_beam": false,
 	"ultimate_singularity": false,
@@ -51,11 +52,46 @@ var unlocked_ultimates: Dictionary = {
 	"ultimate_aegis": false
 }
 
+func get_beam_ultimate_data() -> Dictionary:
+	match beam_level:
+		0:
+			return {
+				"id": "ultimate_beam",
+				"title": "ULTIMATE: Haz de Fisión (Nivel 1)",
+				"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en 1 colosal rayo continuo de plasma eléctrico perforante.",
+				"color": Color(1.0, 0.85, 0.2),
+				"is_ultimate": true
+			}
+		1:
+			return {
+				"id": "ultimate_beam",
+				"title": "ULTIMATE: Haz Dual (Nivel 2)",
+				"desc": "EVOLUCIÓN DEL HAZ: Despliega 2 rayos continuos en ángulo dual (-14° / +14°) para duplicar el frente de daño.",
+				"color": Color(1.0, 0.85, 0.2),
+				"is_ultimate": true
+			}
+		2:
+			return {
+				"id": "ultimate_beam",
+				"title": "ULTIMATE: Haz Triple Prismático (Nivel 3)",
+				"desc": "EVOLUCIÓN MÁXIMA: 3 rayos continuos en abanico (-24° / 0° / +24°) con arcos de plasma entrelazados.",
+				"color": Color(1.0, 0.85, 0.2),
+				"is_ultimate": true
+			}
+		_:
+			return {
+				"id": "ultimate_beam",
+				"title": "ULTIMATE: Haz Triple Prismático",
+				"desc": "Evolución Suprema Máxima.",
+				"color": Color(1.0, 0.85, 0.2),
+				"is_ultimate": true
+			}
+
 var ultimate_definitions := {
 	"multi_shot": {
 		"id": "ultimate_beam",
-		"title": "ULTIMATE: Haz Eléctrico Triple",
-		"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en 3 rayos continuos con arcos de plasma eléctrico perforante.",
+		"title": "ULTIMATE: Haz de Fisión (Nivel 1)",
+		"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en 1 colosal rayo continuo de plasma eléctrico perforante.",
 		"color": Color(1.0, 0.85, 0.2),
 		"is_ultimate": true
 	},
@@ -226,10 +262,14 @@ func show_upgrade_choices(current_level: int) -> void:
 	# 2. Comprobar Ultimates desbloqueables para habilidades en Nv. 10
 	var pending_ultimates: Array = []
 	for base_id in ultimate_definitions.keys():
-		var ult_data: Dictionary = ultimate_definitions[base_id]
-		var ult_id: String = ult_data["id"]
-		if upgrade_levels.get(base_id, 1) >= MAX_UPGRADE_LEVEL and not unlocked_ultimates.get(ult_id, false):
-			pending_ultimates.append(ult_data)
+		if base_id == "multi_shot":
+			if upgrade_levels.get("multi_shot", 1) >= MAX_UPGRADE_LEVEL and beam_level < 3:
+				pending_ultimates.append(get_beam_ultimate_data())
+		else:
+			var ult_data: Dictionary = ultimate_definitions[base_id]
+			var ult_id: String = ult_data["id"]
+			if upgrade_levels.get(base_id, 1) >= MAX_UPGRADE_LEVEL and not unlocked_ultimates.get(ult_id, false):
+				pending_ultimates.append(ult_data)
 			
 	available_pool.shuffle()
 	pending_ultimates.shuffle()
@@ -257,7 +297,7 @@ func show_upgrade_choices(current_level: int) -> void:
 		var opt: Dictionary = raw_opt.duplicate()
 		if opt["id"] == "fire_rate" and unlocked_ultimates.get("ultimate_beam", false):
 			opt["title"] = "Frecuencia de Resonancia"
-			opt["desc"] = "+25% Ticks/seg y +15% Rango y Amplitud eléctrica en los 3 haces"
+			opt["desc"] = "+25% Ticks/seg y +15% Rango y Amplitud eléctrica en el haz continuo"
 
 		var is_ult: bool = opt.get("is_ultimate", false)
 		var btn := Button.new()
@@ -369,7 +409,10 @@ func _on_card_selected(upgrade_id: String) -> void:
 		if child is Button:
 			child.disabled = true
 			
-	if unlocked_ultimates.has(upgrade_id):
+	if upgrade_id == "ultimate_beam":
+		beam_level = min(3, beam_level + 1)
+		unlocked_ultimates["ultimate_beam"] = true
+	elif unlocked_ultimates.has(upgrade_id):
 		unlocked_ultimates[upgrade_id] = true
 	elif upgrade_id != "emergency_repair":
 		var cur: int = upgrade_levels.get(upgrade_id, 1)

@@ -37,8 +37,9 @@ func get_horde_density_multiplier() -> float:
 	# 2. Escalado por Ultimates Desbloqueadas (Opción 3)
 	var ult_mult: float = 1.0
 	if mecha.has_ultimate_beam:
-		ult_mult += 0.75 # Gran salto reactivo al adquirir el rayo triple (+75%)
-		if not beam_surge_notified:
+		var b_lvl: int = mecha.beam_level if "beam_level" in mecha else 1
+		ult_mult += 0.25 * float(b_lvl) # Progresivo: Nv 1 (+25%), Nv 2 (+50%), Nv 3 (+75%)
+		if b_lvl >= 3 and not beam_surge_notified:
 			beam_surge_notified = true
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] ALERTA: RESPUESTA DE ENJAMBRE OMEGA ACTIVADA [!]")
