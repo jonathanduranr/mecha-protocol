@@ -34,13 +34,6 @@ const MEDAL_BRONZE := preload("res://assets/ui/medal_bronze.png")
 
 @onready var http_request: HTTPRequest = $LeaderboardHTTP
 
-# Barra Superior de Super-Jefes
-var boss_container: Control = null
-var boss_name_label: Label = null
-var boss_progress_bar: ProgressBar = null
-var boss_hp_label: Label = null
-var active_boss: Node2D = null
-
 var elapsed_seconds: float = 0.0
 var final_level_reached: int = 1
 var current_user_id: String = ""
@@ -151,8 +144,6 @@ func _ready() -> void:
 	upgrade_panel.visible = false
 	game_over_panel.visible = false
 	
-	setup_boss_hud_bar()
-	
 	start_button.pressed.connect(_on_start_protocol_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	
@@ -195,130 +186,6 @@ func _process(delta: float) -> void:
 		var minutes := int(elapsed_seconds) / 60
 		var seconds := int(elapsed_seconds) % 60
 		timer_label.text = "%02d:%02d" % [minutes, seconds]
-		
-		# Sincronizar barra de super-jefe activa
-		if active_boss != null:
-			if is_instance_valid(active_boss):
-				update_boss_health(active_boss)
-			else:
-				on_boss_defeated(null)
-
-func setup_boss_hud_bar() -> void:
-	boss_container = Control.new()
-	boss_container.name = "BossHUDContainer"
-	boss_container.layout_mode = 1
-	boss_container.anchors_preset = Control.PRESET_TOP_WIDE
-	boss_container.offset_top = 112.0
-	boss_container.offset_bottom = 160.0
-	boss_container.offset_left = 30.0
-	boss_container.offset_right = -30.0
-	boss_container.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	boss_container.visible = false
-	boss_container.modulate.a = 0.0
-	add_child(boss_container)
-	
-	boss_name_label = Label.new()
-	boss_name_label.layout_mode = 1
-	boss_name_label.anchors_preset = Control.PRESET_TOP_WIDE
-	boss_name_label.offset_bottom = 18.0
-	boss_name_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	boss_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_name_label.add_theme_font_size_override("font_size", 13)
-	boss_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
-	boss_name_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
-	boss_name_label.add_theme_constant_override("shadow_offset_x", 1)
-	boss_name_label.add_theme_constant_override("shadow_offset_y", 1)
-	boss_name_label.text = "⚠️ AMENAZA NIVEL 10: AEGIS COLOSSUS (MK. I)"
-	boss_container.add_child(boss_name_label)
-	
-	boss_progress_bar = ProgressBar.new()
-	boss_progress_bar.layout_mode = 1
-	boss_progress_bar.anchors_preset = Control.PRESET_TOP_WIDE
-	boss_progress_bar.offset_top = 22.0
-	boss_progress_bar.offset_bottom = 42.0
-	boss_progress_bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	boss_progress_bar.show_percentage = false
-	
-	var bg_style := StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.04, 0.06, 0.12, 0.92)
-	bg_style.border_color = Color(1.0, 0.25, 0.45, 0.9)
-	bg_style.set_border_width_all(2)
-	bg_style.set_corner_radius_all(6)
-	boss_progress_bar.add_theme_stylebox_override("background", bg_style)
-	
-	var fill_style := StyleBoxFlat.new()
-	fill_style.bg_color = Color(1.0, 0.18, 0.38, 1.0)
-	fill_style.set_corner_radius_all(4)
-	boss_progress_bar.add_theme_stylebox_override("fill", fill_style)
-	
-	boss_container.add_child(boss_progress_bar)
-	
-	boss_hp_label = Label.new()
-	boss_hp_label.layout_mode = 1
-	boss_hp_label.anchors_preset = Control.PRESET_TOP_WIDE
-	boss_hp_label.offset_top = 23.0
-	boss_hp_label.offset_bottom = 41.0
-	boss_hp_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	boss_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	boss_hp_label.add_theme_font_size_override("font_size", 12)
-	boss_hp_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.95))
-	boss_hp_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
-	boss_hp_label.add_theme_constant_override("shadow_offset_x", 1)
-	boss_hp_label.add_theme_constant_override("shadow_offset_y", 1)
-	boss_hp_label.text = "35,000 / 35,000 HP (100%)"
-	boss_container.add_child(boss_hp_label)
-
-func register_boss(boss_node: Node2D) -> void:
-	active_boss = boss_node
-	if boss_container:
-		boss_container.visible = true
-		var tween := create_tween()
-		tween.tween_property(boss_container, "modulate:a", 1.0, 0.35)
-	update_boss_health(boss_node)
-
-func update_boss_health(boss_node: Node2D) -> void:
-	if not is_instance_valid(boss_node) or not is_instance_valid(boss_container):
-		return
-	if active_boss == null or active_boss == boss_node:
-		active_boss = boss_node
-		boss_container.visible = true
-		var cur: float = boss_node.current_health
-		var max_h: float = max(1.0, boss_node.max_health)
-		var pct: float = clamp(cur / max_h, 0.0, 1.0)
-		
-		var b_name: String = boss_node.boss_name if "boss_name" in boss_node else "AMENAZA TITÁN"
-		boss_name_label.text = "⚠️ %s" % b_name.to_upper()
-		boss_progress_bar.max_value = max_h
-		boss_progress_bar.value = cur
-		boss_hp_label.text = "%s / %s HP (%d%%)" % [
-			_format_number(int(cur)),
-			_format_number(int(max_h)),
-			int(pct * 100.0)
-		]
-
-func on_boss_defeated(boss_node: Node2D) -> void:
-	if active_boss == boss_node or boss_node == null:
-		active_boss = null
-		if is_instance_valid(boss_container) and boss_container.visible:
-			boss_name_label.text = "🏆 ¡AMENAZA ELIMINADA!"
-			boss_hp_label.text = "0 / 0 HP (0%)"
-			boss_progress_bar.value = 0
-			var tween := create_tween()
-			tween.tween_interval(1.2)
-			tween.tween_property(boss_container, "modulate:a", 0.0, 0.5)
-			tween.tween_callback(func(): boss_container.visible = false)
-
-func _format_number(val: int) -> String:
-	var s: String = str(val)
-	var result: String = ""
-	var count: int = 0
-	for i in range(s.length() - 1, -1, -1):
-		result = s[i] + result
-		count += 1
-		if count % 3 == 0 and i > 0:
-			result = "," + result
-	return result
 
 func update_health(current: float, max_val: float) -> void:
 	health_bar.max_value = max_val

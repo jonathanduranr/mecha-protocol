@@ -47,7 +47,6 @@ var boss_has_shield: bool = false
 var boss_shield_flash_timer: float = 0.0
 @export var boss_name: String = "COLOSO CENTINELA"
 var overhead_bar_node: Node2D = null
-var hud_ref: CanvasLayer = null
 
 @onready var scrap_scene := preload("res://scenes/scrap.tscn")
 @onready var enemy_bullet_scene := preload("res://scenes/enemy_bullet.tscn")
@@ -64,11 +63,6 @@ func _ready() -> void:
 		if "AEGIS" in b_upper or "COLOSO" in b_upper:
 			boss_has_shield = true
 		setup_boss_overhead_bar()
-		hud_ref = get_tree().get_first_node_in_group("hud") as CanvasLayer
-		if not hud_ref and get_parent():
-			hud_ref = get_parent().get_node_or_null("HUD") as CanvasLayer
-		if hud_ref and hud_ref.has_method("register_boss"):
-			hud_ref.register_boss(self)
 
 func _exit_tree() -> void:
 	if is_instance_valid(overhead_bar_node):
@@ -415,9 +409,6 @@ func take_damage(amount: float, knockback_dir: Vector2 = Vector2.ZERO, force: fl
 	current_health -= amount
 	flash_timer = 0.08
 	
-	if drone_type == "boss" and is_instance_valid(hud_ref) and hud_ref.has_method("update_boss_health"):
-		hud_ref.update_boss_health(self)
-	
 	# Aplicar Knockback
 	if force > 0 and knockback_resistance < 1.0:
 		var effective_force := force * (1.0 - knockback_resistance)
@@ -430,8 +421,6 @@ func take_damage(amount: float, knockback_dir: Vector2 = Vector2.ZERO, force: fl
 
 func die() -> void:
 	if drone_type == "boss":
-		if is_instance_valid(hud_ref) and hud_ref.has_method("on_boss_defeated"):
-			hud_ref.on_boss_defeated(self)
 		if is_instance_valid(overhead_bar_node):
 			overhead_bar_node.queue_free()
 			overhead_bar_node = null
