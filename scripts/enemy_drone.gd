@@ -25,6 +25,9 @@ var shoot_timer: float = 1.5
 
 # Comportamiento especial Boss
 var boss_attack_timer: float = 4.0
+@export var boss_name: String = "COLOSO CENTINELA"
+var overhead_bar_node: Node2D = null
+var hud_ref: CanvasLayer = null
 
 @onready var scrap_scene := preload("res://scenes/scrap.tscn")
 @onready var enemy_bullet_scene := preload("res://scenes/enemy_bullet.tscn")
@@ -35,6 +38,18 @@ func _ready() -> void:
 	current_health = max_health
 	collision_layer = 2  # Layer 2: Enemies
 	collision_mask = 5   # Layer 1: Mecha, Layer 3: Bullets
+	
+	if drone_type == "boss":
+		setup_boss_overhead_bar()
+		hud_ref = get_tree().get_first_node_in_group("hud") as CanvasLayer
+		if not hud_ref and get_parent():
+			hud_ref = get_parent().get_node_or_null("HUD") as CanvasLayer
+		if hud_ref and hud_ref.has_method("register_boss"):
+			hud_ref.register_boss(self)
+
+func _exit_tree() -> void:
+	if is_instance_valid(overhead_bar_node):
+		overhead_bar_node.queue_free()
 
 func setup_type() -> void:
 	var shape := $CollisionShape2D.shape as CircleShape2D
@@ -206,6 +221,9 @@ func take_damage(amount: float, knockback_dir: Vector2 = Vector2.ZERO, force: fl
 	current_health -= amount
 	flash_timer = 0.08
 	
+	if drone_type == "boss" and is_instance_valid(hud_ref) and hud_ref.has_method("update_boss_health"):
+		hud_ref.update_boss_health(self)
+	
 	# Aplicar Knockback
 	if force > 0 and knockback_resistance < 1.0:
 		var effective_force := force * (1.0 - knockback_resistance)
@@ -217,6 +235,13 @@ func take_damage(amount: float, knockback_dir: Vector2 = Vector2.ZERO, force: fl
 		die()
 
 func die() -> void:
+	if drone_type == "boss":
+		if is_instance_valid(hud_ref) and hud_ref.has_method("on_boss_defeated"):
+			hud_ref.on_boss_defeated(self)
+		if is_instance_valid(overhead_bar_node):
+			overhead_bar_node.queue_free()
+			overhead_bar_node = null
+
 	var scrap = scrap_scene.instantiate()
 	scrap.xp_value = xp_reward
 	scrap.global_position = global_position
@@ -294,10 +319,97 @@ func _draw() -> void:
 			draw_polyline(pts, border_color, 4.0)
 			draw_circle(Vector2.ZERO, 16.0, Color(1.0, 0.1, 0.4, 0.85))
 			draw_circle(Vector2.ZERO, 8.0, Color(1.0, 0.9, 0.2, 1.0))
+
+func setup_boss_overhead_bar() -> void:
+	overhead_bar_node = BossOverheadBar.new(self)
+	overhead_bar_node.global_position = global_position + Vector2(0.0, -78.0)
+	overhead_bar_node.global_rotation = 0.0
+	call_deferred("_attach_overhead_bar")
+
+func _attach_overhead_bar() -> void:
+	if is_instance_valid(overhead_bar_node) and get_parent():
+		get_parent().add_child(overhead_bar_node)
+
+class BossOverheadBar extends Node2D:
+	var boss: Area2D
+	var lag_hp: float = 1.0
+	var label: Label
+	
+	func _init(p_boss: Area2D) -> void:
+		boss = p_boss
+		lag_hp = boss.current_health
+		z_index = 35
+		
+		label = Label.new()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.position = Vector2(-120, -22)
+		label.size = Vector2(240, 16)
+		label.add_theme_font_size_override("font_size", 11)
+		label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
+		label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+		label.add_theme_constant_override("shadow_offset_x", 1)
+		label.add_theme_constant_override("shadow_offset_y", 1)
+		add_child(label)
+		
+	func _process(delta: float) -> void:
+		if not is_instance_valid(boss) or not boss.is_inside_tree():
+			queue_free()
+			return
+		global_position = boss.global_position + Vector2(0.0, -78.0)
+		global_rotation = 0.0
+		
+		lag_hp = lerp(lag_hp, boss.current_health, 8.0 * delta)
+		var max_h: float = max(1.0, boss.max_health)
+		var pct: float = clamp(boss.current_health / max_h, 0.0, 1.0)
+		var b_title: String = boss.boss_name if "boss_name" in boss else "JEFE"
+		label.text = "%s  [%d%%]" % [b_title, int(pct * 100.0)]
+		queue_redraw()
+		
+	func _draw() -> void:
+		if not is_instance_valid(boss):
+			return
 			
-			var bar_width: float = 80.0
-			var bar_height: float = 8.0
-			var bar_pos := Vector2(-bar_width / 2.0, -60.0)
-			draw_rect(Rect2(bar_pos, Vector2(bar_width, bar_height)), Color(0.1, 0.1, 0.1, 0.8))
-			var pct: float = clamp(current_health / max_health, 0.0, 1.0)
-			draw_rect(Rect2(bar_pos, Vector2(bar_width * pct, bar_height)), Color(1.0, 0.2, 0.3, 1.0))
+		var bar_w: float = 140.0
+		var bar_h: float = 12.0
+		var half_w: float = bar_w * 0.5
+		var bar_rect := Rect2(-half_w, -bar_h * 0.5, bar_w, bar_h)
+		
+		# Sombra exterior
+		draw_rect(Rect2(-half_w - 3, -bar_h * 0.5 - 3, bar_w + 6, bar_h + 6), Color(0.0, 0.0, 0.0, 0.75))
+		
+		# Fondo oscuro tecnológico
+		draw_rect(bar_rect, Color(0.04, 0.06, 0.12, 0.94))
+		
+		var max_h: float = max(1.0, boss.max_health)
+		var cur_pct: float = clamp(boss.current_health / max_h, 0.0, 1.0)
+		var lag_pct: float = clamp(lag_hp / max_h, 0.0, 1.0)
+		
+		# Barra de retraso de impacto (lag bar en amarillo ámbar)
+		if lag_pct > cur_pct:
+			var lag_rect := Rect2(-half_w + 2, -bar_h * 0.5 + 2, (bar_w - 4) * lag_pct, bar_h - 4)
+			draw_rect(lag_rect, Color(1.0, 0.75, 0.2, 0.85))
+			
+		# Barra principal de vida (Carmesí / Neón magenta vibrante)
+		if cur_pct > 0.0:
+			var hp_rect := Rect2(-half_w + 2, -bar_h * 0.5 + 2, (bar_w - 4) * cur_pct, bar_h - 4)
+			var fill_color := Color(1.0, 0.18, 0.38, 1.0)
+			if cur_pct < 0.25:
+				var pulse: float = 0.75 + 0.25 * sin(Time.get_ticks_msec() * 0.014)
+				fill_color = Color(1.0, 0.05, 0.15, pulse)
+			draw_rect(hp_rect, fill_color)
+			
+		# Segmentos tácticos cada 20%
+		for i in range(1, 5):
+			var tick_x: float = -half_w + 2 + (bar_w - 4) * (i * 0.2)
+			draw_line(Vector2(tick_x, -bar_h * 0.5 + 2), Vector2(tick_x, bar_h * 0.5 - 2), Color(0.04, 0.06, 0.12, 0.85), 1.5)
+			
+		# Borde neón cibernético
+		draw_rect(bar_rect, Color(1.0, 0.3, 0.52, 0.95), false, 2.0)
+		
+		# Acentos angulares de tecnología en las esquinas
+		var c_len: float = 4.0
+		draw_line(Vector2(-half_w - 2, -bar_h*0.5 - 2), Vector2(-half_w - 2 + c_len, -bar_h*0.5 - 2), Color(1.0, 0.85, 0.3), 1.5)
+		draw_line(Vector2(-half_w - 2, -bar_h*0.5 - 2), Vector2(-half_w - 2, -bar_h*0.5 - 2 + c_len), Color(1.0, 0.85, 0.3), 1.5)
+		draw_line(Vector2(half_w + 2, -bar_h*0.5 - 2), Vector2(half_w + 2 - c_len, -bar_h*0.5 - 2), Color(1.0, 0.85, 0.3), 1.5)
+		draw_line(Vector2(half_w + 2, -bar_h*0.5 - 2), Vector2(half_w + 2, -bar_h*0.5 - 2 + c_len), Color(1.0, 0.85, 0.3), 1.5)

@@ -8,9 +8,60 @@ var next_swarm_time: float = 40.0
 
 var boss_spawned_3m: bool = false
 var boss_spawned_6m: bool = false
+var spawned_level_bosses: Dictionary = {
+	10: false,
+	20: false,
+	30: false,
+	40: false,
+	50: false
+}
 
 @onready var drone_scene := preload("res://scenes/enemy_drone.tscn")
 @onready var hud: CanvasLayer = get_parent().get_node_or_null("HUD")
+
+func _ready() -> void:
+	if is_instance_valid(mecha) and mecha.has_signal("level_up"):
+		mecha.level_up.connect(_on_mecha_level_up)
+
+func _on_mecha_level_up(lvl: int) -> void:
+	if lvl in spawned_level_bosses and not spawned_level_bosses[lvl]:
+		spawned_level_bosses[lvl] = true
+		spawn_level_boss(lvl)
+
+func spawn_level_boss(lvl: int) -> void:
+	var v_size := get_viewport_rect().size
+	var spawn_pos := Vector2(v_size.x * 0.5, -90.0)
+	
+	match lvl:
+		10:
+			if hud and hud.has_method("show_alert"):
+				hud.show_alert("[!] AMENAZA NIVEL 10: AEGIS COLOSSUS (MK. I) [!]")
+			spawn_drone_at_pos(spawn_pos, "boss", 3500.0, "AEGIS COLOSSUS (MK. I)")
+			for i in range(6):
+				var angle := i * (TAU / 6.0)
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 85.0, "tank", 220.0)
+		20:
+			if hud and hud.has_method("show_alert"):
+				hud.show_alert("[!] AMENAZA NIVEL 20: HIVE HYDRA (MK. II) [!]")
+			spawn_drone_at_pos(spawn_pos, "boss", 7500.0, "HIVE HYDRA (MK. II)")
+			for i in range(12):
+				var angle := i * (TAU / 12.0)
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 95.0, "swarm", 70.0)
+		30:
+			if hud and hud.has_method("show_alert"):
+				hud.show_alert("[!] AMENAZA NIVEL 30: CHRONOS DREADNOUGHT (MK. III) [!]")
+			spawn_drone_at_pos(spawn_pos, "boss", 14000.0, "CHRONOS DREADNOUGHT (MK. III)")
+			for i in range(8):
+				var angle := i * (TAU / 8.0)
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 105.0, "shooter", 180.0)
+		40:
+			if hud and hud.has_method("show_alert"):
+				hud.show_alert("[!] AMENAZA NIVEL 40: APEX ANNIHILATOR (MK. IV) [!]")
+			spawn_drone_at_pos(spawn_pos, "boss", 25000.0, "APEX ANNIHILATOR (MK. IV)")
+		50:
+			if hud and hud.has_method("show_alert"):
+				hud.show_alert("[!] ALERTA APOCALÍPTICA: OMEGA SINGULARITY GOD (MK. V) [!]")
+			spawn_drone_at_pos(spawn_pos, "boss", 45000.0, "OMEGA SINGULARITY GOD (MK. V)")
 
 func _physics_process(delta: float) -> void:
 	elapsed_time += delta
@@ -26,13 +77,13 @@ func _physics_process(delta: float) -> void:
 		boss_spawned_3m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("[!] COLOSO CENTINELA DETECTADO [!]")
-		spawn_boss_with_escort(2500.0)
+		spawn_boss_with_escort(2500.0, "COLOSO CENTINELA (MK. I)")
 		
 	if elapsed_time >= 360.0 and not boss_spawned_6m:
 		boss_spawned_6m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("[!] TITAN DE ASALTO MK-II DETECTADO [!]")
-		spawn_boss_with_escort(5200.0)
+		spawn_boss_with_escort(5200.0, "TITÁN DE ASALTO (MK. II)")
 	
 	# Spawner de Escuadrones Tácticos por Intervalos (Frecuencia duplicada)
 	if squad_timer <= 0:
@@ -189,10 +240,10 @@ func spawn_shooter_patrol(shooter_hp: float, guard_hp: float) -> void:
 		spawn_drone_at_pos(Vector2(x_pos - 75 + (i * 30), -20.0), "scout", guard_hp)
 
 ## Jefe Titán con escolta de honor
-func spawn_boss_with_escort(boss_hp: float) -> void:
+func spawn_boss_with_escort(boss_hp: float, custom_name: String = "COLOSO CENTINELA (MK. I)") -> void:
 	var v_size := get_viewport_rect().size
 	var spawn_pos := Vector2(v_size.x * 0.5, -80.0)
-	spawn_drone_at_pos(spawn_pos, "boss", boss_hp)
+	spawn_drone_at_pos(spawn_pos, "boss", boss_hp, custom_name)
 	# Escuadra de 8 scouts de escolta
 	for i in range(8):
 		var angle := i * (TAU / 8.0)
@@ -238,11 +289,14 @@ func spawn_specific_enemy(type_name: String, hp: float) -> void:
 	var spawn_pos := Vector2(randf_range(40, v_size.x - 40), -50.0)
 	spawn_drone_at_pos(spawn_pos, type_name, hp)
 
-func spawn_drone_at_pos(pos: Vector2, type_name: String, hp: float) -> void:
+func spawn_drone_at_pos(pos: Vector2, type_name: String, hp: float, custom_boss_name: String = "") -> Node2D:
 	var drone = drone_scene.instantiate()
 	drone.drone_type = type_name
 	drone.max_health = hp
+	if custom_boss_name != "":
+		drone.boss_name = custom_boss_name
 	drone.target_mecha = mecha
 	drone.global_position = pos
 	drone.add_to_group("enemies")
 	get_parent().add_child(drone)
+	return drone
