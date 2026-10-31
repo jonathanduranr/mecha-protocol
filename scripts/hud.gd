@@ -54,8 +54,8 @@ var unlocked_ultimates: Dictionary = {
 var ultimate_definitions := {
 	"multi_shot": {
 		"id": "ultimate_beam",
-		"title": "ULTIMATE: Haz Eléctrico",
-		"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en un rayo continuo con arcos de plasma eléctrico perforante.",
+		"title": "ULTIMATE: Haz Eléctrico Triple",
+		"desc": "EVOLUCIÓN SUPREMA: Transforma los cañones en 3 rayos continuos con arcos de plasma eléctrico perforante.",
 		"color": Color(1.0, 0.85, 0.2),
 		"is_ultimate": true
 	},

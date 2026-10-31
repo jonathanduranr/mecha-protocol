@@ -191,30 +191,36 @@ func process_ultimate_beam(delta: float, aim_dir: Vector2) -> void:
 	beam_tick_timer -= delta
 	AudioManager.start_ultimate_beam()
 	
-	# Procesamiento de daño continuo por ticks (15 ticks/seg) enfocado en un solo rayo
+	# Procesamiento de daño continuo por ticks (15 ticks/seg) a través de los 3 rayos
 	if beam_tick_timer <= 0.0:
 		beam_tick_timer = 0.065
-		var beam_start: Vector2 = global_position + aim_dir * 20.0
-		var tick_damage: float = 38.0 * damage_multiplier
+		var tick_damage: float = 32.0 * damage_multiplier
 		var enemies := get_tree().get_nodes_in_group("enemies")
+		var hit_enemies: Dictionary = {}
+		var beam_angles: Array[float] = [-deg_to_rad(24.0), 0.0, deg_to_rad(24.0)]
 		
-		for enemy in enemies:
-			if not is_instance_valid(enemy):
-				continue
-				
-			var enemy_pos: Vector2 = enemy.global_position
-			var enemy_radius: float = 18.0
-			var col_shape = enemy.get_node_or_null("CollisionShape2D")
-			if col_shape and col_shape.shape is CircleShape2D:
-				enemy_radius = col_shape.shape.radius
-				
-			var to_enemy: Vector2 = enemy_pos - beam_start
-			var proj: float = to_enemy.dot(aim_dir)
-			if proj >= 0.0 and proj <= BEAM_LENGTH:
-				var closest_pt: Vector2 = beam_start + aim_dir * proj
-				var hit_dist := enemy_radius + BEAM_HALF_WIDTH
-				if enemy_pos.distance_squared_to(closest_pt) <= hit_dist * hit_dist:
-					enemy.take_damage(tick_damage, aim_dir, 35.0)
+		for angle_offset in beam_angles:
+			var current_dir: Vector2 = aim_dir.rotated(angle_offset)
+			var beam_start: Vector2 = global_position + current_dir * 20.0
+			
+			for enemy in enemies:
+				if not is_instance_valid(enemy) or hit_enemies.has(enemy):
+					continue
+					
+				var enemy_pos: Vector2 = enemy.global_position
+				var enemy_radius: float = 18.0
+				var col_shape = enemy.get_node_or_null("CollisionShape2D")
+				if col_shape and col_shape.shape is CircleShape2D:
+					enemy_radius = col_shape.shape.radius
+					
+				var to_enemy: Vector2 = enemy_pos - beam_start
+				var proj: float = to_enemy.dot(current_dir)
+				if proj >= 0.0 and proj <= BEAM_LENGTH:
+					var closest_pt: Vector2 = beam_start + current_dir * proj
+					var hit_dist: float = enemy_radius + BEAM_HALF_WIDTH
+					if enemy_pos.distance_squared_to(closest_pt) <= hit_dist * hit_dist:
+						hit_enemies[enemy] = true
+						enemy.take_damage(tick_damage, current_dir, 35.0)
 
 # ==============================================================================
 # GESTIÓN Y ACTIVACIÓN DE EVOLUCIONES SUPREMAS (ULTIMATES)
@@ -731,55 +737,62 @@ func _draw() -> void:
 		c.a = w_alpha * c.a
 		draw_arc(wp, w.radius, 0.0, TAU, 36, c, w.width * w_alpha)
 
-	# 2. HAZ CONTINUO DE FISIÓN CUÁNTICA
+	# 2. HAZ CONTINUO DE FISIÓN CUÁNTICA TRIPLE ELÉCTRICO
 	if has_ultimate_beam and is_beam_firing:
-		var start_pt := Vector2(20, 0)
-		var end_pt := Vector2(BEAM_LENGTH, 0)
-		
-		# 1. Halo difuso exterior (28px de ancho)
-		draw_line(start_pt, end_pt, Color(0.05, 0.65, 1.0, 0.32), 28.0)
-		# 2. Haz de plasma medio de alta energía (14px)
-		draw_line(start_pt, end_pt, Color(0.3, 0.92, 1.0, 0.88), 14.0)
-		# 3. Núcleo de fisión blanco supercaliente (3.5px)
-		draw_line(start_pt, end_pt, Color(1.0, 1.0, 1.0, 1.0), 3.5)
-		
-		# 4. Rayos y arcos eléctricos serpenteando alrededor del haz
-		var arc_pts_1 := PackedVector2Array()
-		var arc_pts_2 := PackedVector2Array()
-		var num_steps := int((BEAM_LENGTH - 24.0) / 28.0)
-		
-		for i in range(num_steps + 1):
-			var bx: float = 24.0 + (i * 28.0)
+		var beam_angles: Array[float] = [-deg_to_rad(24.0), 0.0, deg_to_rad(24.0)]
+		for b_idx in range(beam_angles.size()):
+			var ang: float = beam_angles[b_idx]
+			var dir_vec := Vector2.from_angle(ang)
+			var start_pt := dir_vec * 20.0
+			var end_pt := dir_vec * BEAM_LENGTH
+			var perp_vec := Vector2(-dir_vec.y, dir_vec.x)
 			
-			# Onda 1 + fluctuación caótica
-			var wave1 := sin(bx * 0.032 + electric_anim_time) * 11.0
-			var noise1 := sin(bx * 0.12 + electric_anim_time * 2.2) * 5.0
-			arc_pts_1.append(Vector2(bx, wave1 + noise1))
+			# 1. Halo difuso exterior (24px de ancho)
+			draw_line(start_pt, end_pt, Color(0.05, 0.65, 1.0, 0.28), 24.0)
+			# 2. Haz de plasma medio de alta energía (12px)
+			draw_line(start_pt, end_pt, Color(0.3, 0.92, 1.0, 0.85), 12.0)
+			# 3. Núcleo de fisión blanco supercaliente (3.0px)
+			draw_line(start_pt, end_pt, Color(1.0, 1.0, 1.0, 1.0), 3.0)
 			
-			# Onda 2 en contrafase
-			var wave2 := cos(bx * 0.038 - electric_anim_time * 1.5) * 12.0
-			var noise2 := cos(bx * 0.14 - electric_anim_time * 2.6) * 5.0
-			arc_pts_2.append(Vector2(bx, wave2 + noise2))
+			# 4. Rayos y arcos eléctricos serpenteando alrededor del haz
+			var arc_pts_1 := PackedVector2Array()
+			var arc_pts_2 := PackedVector2Array()
+			var num_steps := int((BEAM_LENGTH - 24.0) / 30.0)
+			var phase_offset: float = b_idx * 1.8
 			
-		draw_polyline(arc_pts_1, Color(0.75, 0.95, 1.0, 0.95), 2.2)
-		draw_polyline(arc_pts_2, Color(0.35, 0.88, 1.0, 0.85), 1.8)
-		
-		# Bifurcaciones y chispas de plasma que brotan del rayo
-		for i in range(2, num_steps - 1, 3):
-			var pt: Vector2 = arc_pts_1[i]
-			var f_dir: float = 1.0 if (i % 2 == 0) else -1.0
-			var f_len := 12.0 + sin(electric_anim_time * 3.0 + i) * 6.0
-			var fork_end := pt + Vector2(sin(electric_anim_time + i) * 8.0, f_dir * f_len)
-			draw_line(pt, fork_end, Color(0.85, 0.98, 1.0, 0.75), 1.5)
-			draw_circle(pt, 2.5, Color.WHITE)
+			for i in range(num_steps + 1):
+				var dist_along: float = 24.0 + (i * 30.0)
+				var base_pt := dir_vec * dist_along
+				
+				# Onda 1 + fluctuación caótica transversal
+				var wave1 := sin(dist_along * 0.032 + electric_anim_time + phase_offset) * 9.0
+				var noise1 := sin(dist_along * 0.12 + electric_anim_time * 2.2 + b_idx) * 4.0
+				arc_pts_1.append(base_pt + perp_vec * (wave1 + noise1))
+				
+				# Onda 2 en contrafase
+				var wave2 := cos(dist_along * 0.038 - electric_anim_time * 1.5 + phase_offset) * 10.0
+				var noise2 := cos(dist_along * 0.14 - electric_anim_time * 2.6 + b_idx) * 4.0
+				arc_pts_2.append(base_pt + perp_vec * (wave2 + noise2))
+				
+			draw_polyline(arc_pts_1, Color(0.75, 0.95, 1.0, 0.95), 2.0)
+			draw_polyline(arc_pts_2, Color(0.35, 0.88, 1.0, 0.85), 1.6)
 			
-		# Flares en las dos bocas de cañón y prisma emisor
-		draw_circle(Vector2(20, -7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
-		draw_circle(Vector2(20, 7), 6.0, Color(0.3, 0.9, 1.0, 0.9))
-		draw_circle(Vector2(20, -7), 2.5, Color.WHITE)
-		draw_circle(Vector2(20, 7), 2.5, Color.WHITE)
-		draw_circle(Vector2(24, 0), 10.0, Color(0.15, 0.8, 1.0, 0.4))
-		draw_circle(Vector2(24, 0), 4.0, Color.WHITE)
+			# Bifurcaciones y chispas de plasma que brotan del rayo
+			for i in range(2, num_steps - 1, 3):
+				var pt: Vector2 = arc_pts_1[i]
+				var f_dir: float = 1.0 if (i % 2 == 0) else -1.0
+				var f_len := 10.0 + sin(electric_anim_time * 3.0 + i + b_idx) * 5.0
+				var fork_end := pt + perp_vec * (f_dir * f_len) + dir_vec * (sin(electric_anim_time + i) * 6.0)
+				draw_line(pt, fork_end, Color(0.85, 0.98, 1.0, 0.75), 1.4)
+				draw_circle(pt, 2.2, Color.WHITE)
+				
+			# Flares en las salidas de cada cañón
+			draw_circle(start_pt, 5.0, Color(0.3, 0.9, 1.0, 0.9))
+			draw_circle(start_pt, 2.0, Color.WHITE)
+			
+		# Gran prisma emisor cuántico central
+		draw_circle(Vector2(22, 0), 12.0, Color(0.15, 0.8, 1.0, 0.45))
+		draw_circle(Vector2(22, 0), 5.0, Color.WHITE)
 
 	# 3. VÓRTICE DE METRALLA ORBITAL (8 SIERRAS CINÉTICAS GIRATORIAS)
 	if has_ultimate_vortex:
