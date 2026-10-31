@@ -81,7 +81,7 @@ func setup_type() -> void:
 		"boss":
 			speed = 75.0
 			contact_damage = 55.0
-			xp_reward = 250
+			xp_reward = 1500
 			knockback_resistance = 1.0
 			if shape: shape.radius = 48.0
 
@@ -241,6 +241,18 @@ func die() -> void:
 		if is_instance_valid(overhead_bar_node):
 			overhead_bar_node.queue_free()
 			overhead_bar_node = null
+
+		# Explosión de recompensa masiva: 8 orbes de chatarra en anillo
+		var shard_count: int = 8
+		var shard_xp: int = max(50, int(xp_reward / shard_count))
+		for i in range(shard_count):
+			var angle := i * (TAU / shard_count)
+			var scrap = scrap_scene.instantiate()
+			scrap.xp_value = shard_xp
+			scrap.global_position = global_position + Vector2(cos(angle), sin(angle)) * 36.0
+			get_parent().add_child(scrap)
+		queue_free()
+		return
 
 	var scrap = scrap_scene.instantiate()
 	scrap.xp_value = xp_reward

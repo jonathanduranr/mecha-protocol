@@ -266,7 +266,7 @@ func setup_boss_hud_bar() -> void:
 	boss_hp_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
 	boss_hp_label.add_theme_constant_override("shadow_offset_x", 1)
 	boss_hp_label.add_theme_constant_override("shadow_offset_y", 1)
-	boss_hp_label.text = "3,500 / 3,500 HP (100%)"
+	boss_hp_label.text = "35,000 / 35,000 HP (100%)"
 	boss_container.add_child(boss_hp_label)
 
 func register_boss(boss_node: Node2D) -> void:

@@ -36,32 +36,32 @@ func spawn_level_boss(lvl: int) -> void:
 		10:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 10: AEGIS COLOSSUS (MK. I) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 3500.0, "AEGIS COLOSSUS (MK. I)")
+			spawn_drone_at_pos(spawn_pos, "boss", 35000.0, "AEGIS COLOSSUS (MK. I)")
 			for i in range(6):
 				var angle := i * (TAU / 6.0)
 				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 85.0, "tank", 220.0)
 		20:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 20: HIVE HYDRA (MK. II) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 7500.0, "HIVE HYDRA (MK. II)")
+			spawn_drone_at_pos(spawn_pos, "boss", 75000.0, "HIVE HYDRA (MK. II)")
 			for i in range(12):
 				var angle := i * (TAU / 12.0)
 				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 95.0, "swarm", 70.0)
 		30:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 30: CHRONOS DREADNOUGHT (MK. III) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 14000.0, "CHRONOS DREADNOUGHT (MK. III)")
+			spawn_drone_at_pos(spawn_pos, "boss", 140000.0, "CHRONOS DREADNOUGHT (MK. III)")
 			for i in range(8):
 				var angle := i * (TAU / 8.0)
 				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 105.0, "shooter", 180.0)
 		40:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 40: APEX ANNIHILATOR (MK. IV) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 25000.0, "APEX ANNIHILATOR (MK. IV)")
+			spawn_drone_at_pos(spawn_pos, "boss", 250000.0, "APEX ANNIHILATOR (MK. IV)")
 		50:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] ALERTA APOCALÍPTICA: OMEGA SINGULARITY GOD (MK. V) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 45000.0, "OMEGA SINGULARITY GOD (MK. V)")
+			spawn_drone_at_pos(spawn_pos, "boss", 450000.0, "OMEGA SINGULARITY GOD (MK. V)")
 
 func _physics_process(delta: float) -> void:
 	elapsed_time += delta
@@ -72,18 +72,18 @@ func _physics_process(delta: float) -> void:
 		trigger_swarm_event()
 		next_swarm_time = elapsed_time + randf_range(38.0, 46.0)
 	
-	# Eventos de Jefes por tiempo
+	# Eventos de Jefes por tiempo (+1000% HP)
 	if elapsed_time >= 180.0 and not boss_spawned_3m:
 		boss_spawned_3m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("[!] COLOSO CENTINELA DETECTADO [!]")
-		spawn_boss_with_escort(2500.0, "COLOSO CENTINELA (MK. I)")
+		spawn_boss_with_escort(25000.0, "COLOSO CENTINELA (MK. I)")
 		
 	if elapsed_time >= 360.0 and not boss_spawned_6m:
 		boss_spawned_6m = true
 		if hud and hud.has_method("show_alert"):
 			hud.show_alert("[!] TITAN DE ASALTO MK-II DETECTADO [!]")
-		spawn_boss_with_escort(5200.0, "TITÁN DE ASALTO (MK. II)")
+		spawn_boss_with_escort(55000.0, "TITÁN DE ASALTO (MK. II)")
 	
 	# Spawner de Escuadrones Tácticos por Intervalos (Frecuencia duplicada)
 	if squad_timer <= 0:
