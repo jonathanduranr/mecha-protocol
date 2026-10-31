@@ -44,12 +44,12 @@ var is_submitting: bool = false
 
 const MAX_UPGRADE_LEVEL: int = 10
 var upgrade_levels: Dictionary = {
-	"multi_shot": 0,
-	"damage_boost": 0,
-	"fire_rate": 0,
-	"speed_boost": 0,
-	"magnet_boost": 0,
-	"repair_hull": 0
+	"multi_shot": 1,
+	"damage_boost": 1,
+	"fire_rate": 1,
+	"speed_boost": 1,
+	"magnet_boost": 1,
+	"repair_hull": 1
 }
 
 var archetype_upgrades := [
@@ -169,7 +169,7 @@ func show_upgrade_choices(current_level: int) -> void:
 	# Filtrar habilidades que aún no alcanzan el nivel 10
 	var available_pool: Array = []
 	for opt in archetype_upgrades:
-		var cur_lvl: int = upgrade_levels.get(opt["id"], 0)
+		var cur_lvl: int = upgrade_levels.get(opt["id"], 1)
 		if cur_lvl < MAX_UPGRADE_LEVEL:
 			available_pool.append(opt)
 			
@@ -258,9 +258,13 @@ func show_upgrade_choices(current_level: int) -> void:
 		header_hbox.add_child(title_label)
 		
 		if opt["id"] != "emergency_repair":
-			var next_lvl: int = upgrade_levels.get(opt["id"], 0) + 1
+			var cur_lvl: int = upgrade_levels.get(opt["id"], 1)
+			var next_lvl: int = cur_lvl + 1
 			var level_label_card := Label.new()
-			level_label_card.text = "Nv %d/%d" % [next_lvl, MAX_UPGRADE_LEVEL]
+			if next_lvl >= MAX_UPGRADE_LEVEL:
+				level_label_card.text = "Nv %d → %d (MÁX)" % [cur_lvl, next_lvl]
+			else:
+				level_label_card.text = "Nv %d → %d" % [cur_lvl, next_lvl]
 			level_label_card.add_theme_font_size_override("font_size", 15)
 			level_label_card.add_theme_color_override("font_color", opt["color"])
 			level_label_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -282,8 +286,14 @@ func show_upgrade_choices(current_level: int) -> void:
 		cards_container.add_child(btn)
 
 func _on_card_selected(upgrade_id: String) -> void:
+	for child in cards_container.get_children():
+		if child is Button:
+			child.disabled = true
+			
 	if upgrade_id != "emergency_repair":
-		upgrade_levels[upgrade_id] = upgrade_levels.get(upgrade_id, 0) + 1
+		var cur: int = upgrade_levels.get(upgrade_id, 1)
+		upgrade_levels[upgrade_id] = min(cur + 1, MAX_UPGRADE_LEVEL)
+		
 	upgrade_panel.visible = false
 	get_tree().paused = false
 	emit_signal("upgrade_selected", upgrade_id)
