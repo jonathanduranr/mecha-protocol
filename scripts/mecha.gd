@@ -68,6 +68,7 @@ var active_trails: Array[Dictionary] = []
 # 3. Vórtice de Metralla Orbital (Imán Cuántico Nv. 10)
 var has_ultimate_vortex: bool = false
 var vortex_angle: float = 0.0
+var absorb_pulse: float = 0.0
 const VORTEX_RADIUS: float = 68.0
 const VORTEX_BLADES: int = 8
 
@@ -98,6 +99,8 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if damage_cooldown > 0:
 		damage_cooldown -= delta
+	if absorb_pulse > 0:
+		absorb_pulse -= delta
 
 	# Reloj de animación procedural continuo para efectos visuales neón
 	electric_anim_time += delta * 4.0
@@ -816,24 +819,30 @@ func _draw() -> void:
 		draw_circle(Vector2(22, 0), 12.0 + (fire_rate_level - 1) * 1.2, Color(0.15, 0.8, 1.0, 0.45))
 		draw_circle(Vector2(22, 0), 5.0 + (fire_rate_level - 1) * 0.5, Color.WHITE)
 
-	# 3. VÓRTICE DE METRALLA ORBITAL (8 SIERRAS CINÉTICAS GIRATORIAS)
+	# 3. TIFÓN CUÁNTICO DE METRALLA (TORNADO ESPIRAL DE XP)
 	if has_ultimate_vortex:
-		draw_arc(Vector2.ZERO, VORTEX_RADIUS, 0.0, TAU, 36, Color(0.75, 0.35, 1.0, 0.25), 1.5)
-		for i in range(VORTEX_BLADES):
-			var blade_ang := vortex_angle + (i * TAU / VORTEX_BLADES)
-			var blade_global := global_position + Vector2(cos(blade_ang), sin(blade_ang)) * VORTEX_RADIUS
-			var b_local := to_local(blade_global)
+		# Anillos orbitales concéntricos del ciclón
+		draw_arc(Vector2.ZERO, 55.0, 0.0, TAU, 32, Color(0.75, 0.35, 1.0, 0.20), 1.2)
+		draw_arc(Vector2.ZERO, 110.0, 0.0, TAU, 36, Color(0.75, 0.35, 1.0, 0.16), 1.2)
+		draw_arc(Vector2.ZERO, 180.0, 0.0, TAU, 40, Color(0.85, 0.45, 1.0, 0.22), 1.5)
+		
+		# 4 Brazos de viento etéreo en espiral de tornado
+		var num_arms: int = 4
+		for a in range(num_arms):
+			var base_arm_ang: float = (vortex_angle * 0.45) + (a * TAU / num_arms) - rotation
+			var arm_pts := PackedVector2Array()
+			var steps := 12
+			for st in range(steps + 1):
+				var r: float = 24.0 + (st * (180.0 - 24.0) / float(steps))
+				var spiral_ang: float = base_arm_ang + (r / 180.0) * 2.4
+				arm_pts.append(Vector2(cos(spiral_ang), sin(spiral_ang)) * r)
+			draw_polyline(arm_pts, Color(0.78, 0.42, 1.0, 0.28), 2.2)
 			
-			draw_circle(b_local, 9.0, Color(0.85, 0.4, 1.0, 0.35))
-			var spin: float = vortex_angle * 4.0 + i
-			var p1 := b_local + Vector2(cos(spin), sin(spin)) * 7.5
-			var p2 := b_local - Vector2(cos(spin), sin(spin)) * 7.5
-			var p3 := b_local + Vector2(-sin(spin), cos(spin)) * 7.5
-			var p4 := b_local - Vector2(-sin(spin), cos(spin)) * 7.5
-			draw_line(p1, p2, Color(0.9, 0.5, 1.0, 0.9), 2.2)
-			draw_line(p3, p4, Color(0.9, 0.5, 1.0, 0.9), 2.2)
-			draw_circle(b_local, 4.5, Color(0.7, 0.2, 0.95, 0.95))
-			draw_circle(b_local, 2.0, Color.WHITE)
+		# Núcleo de absorción / destello al devorar chatarra
+		if absorb_pulse > 0.0:
+			var pulse_alpha: float = clamp(absorb_pulse / 0.16, 0.0, 1.0)
+			draw_circle(Vector2.ZERO, 28.0 + (1.0 - pulse_alpha) * 12.0, Color(0.3, 0.9, 1.0, pulse_alpha * 0.45))
+			draw_circle(Vector2.ZERO, 10.0, Color(1.0, 1.0, 1.0, pulse_alpha * 0.85))
 
 	# 4. CHASIS Y AURA DEL MECHA
 	var aura_color := Color(1.0, 0.85, 0.2, 0.25) if has_ultimate_beam else Color(0.1, 0.8, 1.0, 0.15)

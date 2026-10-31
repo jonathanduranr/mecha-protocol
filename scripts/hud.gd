@@ -75,8 +75,8 @@ var ultimate_definitions := {
 	},
 	"magnet_boost": {
 		"id": "ultimate_vortex",
-		"title": "ULTIMATE: Vórtice de Metralla Orbital",
-		"desc": "EVOLUCIÓN SUPREMA: Imán global permanente. La chatarra orbita como sierras cortantes triturando drones antes de absorberse.",
+		"title": "ULTIMATE: Tifón Cuántico de Metralla",
+		"desc": "EVOLUCIÓN SUPREMA: Imán global permanente. La chatarra entra en un tornado espiral cortante triturando drones antes de ser devorada.",
 		"color": Color(0.85, 0.35, 1.0),
 		"is_ultimate": true
 	},
