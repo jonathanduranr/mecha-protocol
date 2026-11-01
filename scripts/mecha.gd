@@ -9,9 +9,13 @@ signal alert_requested(text: String)
 @export var max_health: float = 120.0
 @export var base_speed: float = 260.0
 @export var fire_rate: float = 0.22          # Cadencia ágil de disparo
-@export var sensor_range: float = 520.0
+@export var sensor_range: float = 780.0
 @export var danger_radius: float = 170.0
 @export var magnet_radius: float = 240.0
+@export var boss_danger_radius: float = 430.0    # Distancia a la que el mecha detecta y maniobra frente al jefe
+@export var boss_safe_distance: float = 360.0    # Distancia óptima de combate para orbitar y castigar
+@export var boss_critical_radius: float = 250.0  # Rango de peligro extremo: retroceso de emergencia
+var boss_orbit_clockwise: bool = true            # Sentido continuo de órbita táctica
 
 # 🪤 Trampa para escaneo de memoria (Honeypot Decoy)
 # Los scripts como HEAPF64 buscarán esta variable de 120.0 para congelarla.
@@ -582,16 +586,84 @@ func calculate_steering_direction() -> Vector2:
 	
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var enemy_count_in_danger: int = 0
+	var boss_present_nearby: bool = false
+	var boss_node: Node2D = null
+	var boss_dist: float = 99999.0
 	
-	for enemy in enemies:
+	for enemy_node: Node in enemies:
+		var enemy := enemy_node as Node2D
 		if not is_instance_valid(enemy) or not is_target_on_screen(enemy):
 			continue
-		var dist := global_position.distance_to(enemy.global_position)
-		if dist < danger_radius and dist > 0.01:
-			var push_away: Vector2 = (global_position - enemy.global_position).normalized()
-			var weight: float = (1.0 - (dist / danger_radius)) * 2.2
-			avoidance_force += push_away * weight
-			enemy_count_in_danger += 1
+		var dist: float = global_position.distance_to(enemy.global_position)
+		var is_boss: bool = (enemy.get("drone_type") == "boss")
+		
+		if is_boss:
+			if dist < boss_dist:
+				boss_dist = dist
+				boss_node = enemy
+				
+			if dist < boss_danger_radius and dist > 0.01:
+				boss_present_nearby = true
+				enemy_count_in_danger += 3
+				var push_away: Vector2 = (global_position - enemy.global_position).normalized()
+				
+				# 1. Repulsión radial calibrada para mantener distancia de seguridad
+				var boss_repulsion_weight: float = 0.0
+				if dist < boss_critical_radius:
+					# Rango crítico (< 250px): empuje de retroceso de emergencia máximo
+					boss_repulsion_weight = 4.8 * (1.0 - (dist / boss_critical_radius)) + 2.8
+				else:
+					# Rango táctico (250px a 430px): repulsión firme para sostener la distancia óptima (~360px)
+					var span: float = max(1.0, boss_danger_radius - boss_critical_radius)
+					boss_repulsion_weight = pow(1.0 - ((dist - boss_critical_radius) / span), 1.3) * 2.8
+				avoidance_force += push_away * boss_repulsion_weight
+				
+				# 2. Órbita Táctica y Flanqueo Lateral (Strafing / Kiting):
+				# En lugar de retroceder en línea recta contra la pared, el Mecha orbita al jefe
+				# a distancia segura, castigando sus flancos y eludiendo escudos frontales.
+				if dist < 400.0:
+					var tan1: Vector2 = Vector2(-push_away.y, push_away.x)
+					var tan2: Vector2 = Vector2(push_away.y, -push_away.x)
+					var v_size: Vector2 = get_viewport_rect().size
+					var arena_center: Vector2 = v_size * 0.5
+					var p1: Vector2 = global_position + tan1 * 90.0
+					var p2: Vector2 = global_position + tan2 * 90.0
+					var d1: float = p1.distance_to(arena_center)
+					var d2: float = p2.distance_to(arena_center)
+					if abs(d1 - d2) > 25.0:
+						boss_orbit_clockwise = (d1 <= d2)
+					var chosen_tan: Vector2 = tan1 if boss_orbit_clockwise else tan2
+					var strafe_factor: float = clampf((400.0 - dist) / 160.0, 0.4, 1.2)
+					avoidance_force += chosen_tan * (2.6 * strafe_factor)
+					
+				# 3. Evasión anticipada del Mega Hyper-Láser (Esquivar la línea roja de fuego)
+				var laser_state: Variant = enemy.get("boss_laser_state")
+				if laser_state != null and int(laser_state) != 0: # CHARGING (1) o FIRING (2)
+					var l_angle: float = float(enemy.get("boss_laser_angle"))
+					var l_dir: Vector2 = Vector2.from_angle(l_angle)
+					var to_mecha: Vector2 = global_position - enemy.global_position
+					var forward_proj: float = to_mecha.dot(l_dir)
+					if forward_proj > 0.0 and forward_proj < 1050.0:
+						var closest_beam_pt: Vector2 = enemy.global_position + l_dir * forward_proj
+						var dist_to_beam: float = global_position.distance_to(closest_beam_pt)
+						if dist_to_beam < 130.0:
+							var dodge_dir: Vector2 = (global_position - closest_beam_pt).normalized()
+							if dodge_dir.length_squared() < 0.01:
+								dodge_dir = Vector2(-l_dir.y, l_dir.x)
+							var dodge_weight: float = clampf((1.0 - (dist_to_beam / 130.0)) * 5.5, 2.5, 6.0)
+							avoidance_force += dodge_dir * dodge_weight
+							
+				# 4. Evasión de Onda de Choque EMP Expansiva
+				var emp_active: Variant = enemy.get("boss_emp_active")
+				if emp_active == true and dist < 320.0:
+					avoidance_force += push_away * 3.6
+		else:
+			# Drones menores (scout, tank, swarm, shooter)
+			if dist < danger_radius and dist > 0.01:
+				var push_away: Vector2 = (global_position - enemy.global_position).normalized()
+				var weight: float = (1.0 - (dist / danger_radius)) * 2.2
+				avoidance_force += push_away * weight
+				enemy_count_in_danger += 1
 			
 	# Evasión táctica de proyectiles enemigos
 	var enemy_bullets := get_tree().get_nodes_in_group("enemy_bullets")
@@ -599,16 +671,25 @@ func calculate_steering_direction() -> Vector2:
 		if not is_instance_valid(b):
 			continue
 		var dist_b := global_position.distance_to(b.global_position)
-		if dist_b < 130.0 and dist_b > 0.01:
+		if dist_b < 140.0 and dist_b > 0.01:
 			var push_b: Vector2 = (global_position - b.global_position).normalized()
-			var weight_b: float = (1.0 - (dist_b / 130.0)) * 3.0
+			var weight_b: float = (1.0 - (dist_b / 140.0)) * 3.2
 			avoidance_force += push_b * weight_b
 			
-	# 2. Atracción hacia el Scrap/XP más cercano (si no hay peligro extremo)
-	if enemy_count_in_danger < 4:
+	# 2. Atracción hacia el Scrap/XP más cercano (prioridad segura)
+	var allow_scrap: bool = (enemy_count_in_danger < 4) and (not boss_present_nearby or boss_dist > 360.0)
+	if allow_scrap:
 		var closest_scrap := get_closest_scrap()
 		if is_instance_valid(closest_scrap):
-			scrap_force = (closest_scrap.global_position - global_position).normalized() * 1.8
+			var scrap_pos: Vector2 = closest_scrap.global_position
+			var safe_to_pickup: bool = true
+			if boss_present_nearby and is_instance_valid(boss_node):
+				# Si el scrap está en la zona de peligro del jefe (< 290px), ignorarlo para no suicidarse
+				if scrap_pos.distance_to(boss_node.global_position) < 290.0:
+					safe_to_pickup = false
+			if safe_to_pickup:
+				var scrap_weight: float = 0.9 if boss_present_nearby else 1.8
+				scrap_force = (scrap_pos - global_position).normalized() * scrap_weight
 			
 	# 3. Retorno instintivo al CENTRO TÁCTICO de la arena (cuando el camino está despejado)
 	var viewport_size := get_viewport_rect().size
@@ -616,29 +697,35 @@ func calculate_steering_direction() -> Vector2:
 	var center_force := Vector2.ZERO
 	var dist_to_center := global_position.distance_to(center)
 	
-	if dist_to_center > 30.0:
-		# Cuanto más lejos del centro esté, más deseo tiene de volver al corazón seguro de la arena
+	# Si el jefe está situado en o cerca del centro, el centro NO es una zona segura
+	var center_compromised: bool = false
+	if is_instance_valid(boss_node) and boss_dist < 520.0:
+		if boss_node.global_position.distance_to(center) < 250.0:
+			center_compromised = true
+			
+	if dist_to_center > 30.0 and not center_compromised:
 		var center_weight: float = 1.0 if enemy_count_in_danger == 0 else 0.4
-		# Desaceleración suave (ease-out) al aproximarse al centro para evitar sobrepasar y temblar
-		var speed_factor: float = clamp((dist_to_center - 30.0) / 160.0, 0.0, 1.0)
+		if boss_present_nearby:
+			center_weight = 0.15 # Espaciado y órbita del jefe tienen prioridad sobre el centro
+		var speed_factor: float = clampf((dist_to_center - 30.0) / 160.0, 0.0, 1.0)
 		center_force = (center - global_position).normalized() * speed_factor * center_weight
 
 	# 4. Repulsión de bordes de la pantalla
-	var boundary_margin: float = 55.0
+	var boundary_margin: float = 65.0
 	
 	if global_position.x < boundary_margin:
 		var factor := (boundary_margin - global_position.x) / boundary_margin
-		boundary_force.x += factor * 2.0
+		boundary_force.x += factor * 3.0
 	elif global_position.x > viewport_size.x - boundary_margin:
 		var factor := (global_position.x - (viewport_size.x - boundary_margin)) / boundary_margin
-		boundary_force.x -= factor * 2.0
+		boundary_force.x -= factor * 3.0
 		
 	if global_position.y < boundary_margin:
 		var factor := (boundary_margin - global_position.y) / boundary_margin
-		boundary_force.y += factor * 2.0
+		boundary_force.y += factor * 3.0
 	elif global_position.y > viewport_size.y - boundary_margin:
 		var factor := (global_position.y - (viewport_size.y - boundary_margin)) / boundary_margin
-		boundary_force.y -= factor * 2.0
+		boundary_force.y -= factor * 3.0
 
 	# Suma ponderada de fuerzas
 	var total_vector: Vector2 = (avoidance_force * 2.0) + scrap_force + boundary_force + (center_force * 1.4)
@@ -654,12 +741,20 @@ func calculate_steering_direction() -> Vector2:
 func get_closest_enemy() -> Node2D:
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var closest: Node2D = null
-	var min_dist: float = sensor_range
-	for enemy in enemies:
+	var min_score: float = 999999.0
+	for enemy_node: Node in enemies:
+		var enemy := enemy_node as Node2D
 		if is_instance_valid(enemy) and is_target_on_screen(enemy):
-			var dist := global_position.distance_to(enemy.global_position)
-			if dist < min_dist:
-				min_dist = dist
+			var dist: float = global_position.distance_to(enemy.global_position)
+			if dist > sensor_range:
+				continue
+			var score: float = dist
+			# Si es un jefe, le otorgamos alta prioridad de fijación táctica de armas
+			# a menos que un dron menor esté a quemarropa (< 160px) amenazando colisión
+			if enemy.get("drone_type") == "boss":
+				score = dist * 0.58
+			if score < min_score:
+				min_score = score
 				closest = enemy
 	return closest
 
