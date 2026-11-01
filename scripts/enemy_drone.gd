@@ -473,7 +473,7 @@ func take_damage(amount: float, knockback_dir: Vector2 = Vector2.ZERO, force: fl
 		var incoming_angle := (-knockback_dir).angle()
 		var diff_angle: float = abs(wrapf(incoming_angle - rotation, -PI, PI))
 		if diff_angle <= (PI / 3.0): # Frente dentro del arco de 120°
-			amount *= 0.15 # Escudo absorbe el 85% del impacto frontal
+			amount *= 0.35 # Escudo absorbe el 65% del impacto frontal
 			boss_shield_flash_timer = 0.15
 			queue_redraw()
 
