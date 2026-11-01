@@ -24,6 +24,10 @@ var dash_direction: Vector2 = Vector2.ZERO
 var shoot_timer: float = 1.5
 
 # Comportamiento especial Boss Devastador
+enum BossKind { AEGIS_COLOSSUS, HIVE_HYDRA, CHRONOS_DREADNOUGHT, APEX_ANNIHILATOR, OMEGA_SINGULARITY_GOD }
+var boss_kind: int = BossKind.AEGIS_COLOSSUS
+var boss_anim_time: float = 0.0
+
 enum BossLaserState { IDLE, CHARGING, FIRING }
 var boss_attack_timer: float = 3.6
 var boss_attack_pattern_index: int = 0
@@ -45,7 +49,10 @@ var boss_danmaku_max: int = 24
 
 var boss_has_shield: bool = false
 var boss_shield_flash_timer: float = 0.0
-@export var boss_name: String = "COLOSO CENTINELA"
+@export var boss_name: String = "COLOSO CENTINELA":
+	set(val):
+		boss_name = val
+		update_boss_kind()
 var overhead_bar_node: Node2D = null
 
 @onready var scrap_scene := preload("res://scenes/scrap.tscn")
@@ -59,10 +66,40 @@ func _ready() -> void:
 	collision_mask = 5   # Layer 1: Mecha, Layer 3: Bullets
 	
 	if drone_type == "boss":
-		var b_upper: String = boss_name.to_upper()
-		if "AEGIS" in b_upper or "COLOSO" in b_upper:
-			boss_has_shield = true
+		update_boss_kind()
 		setup_boss_overhead_bar()
+
+func update_boss_kind() -> void:
+	var b_up := boss_name.to_upper()
+	if "OMEGA" in b_up or "SINGULARITY" in b_up:
+		boss_kind = BossKind.OMEGA_SINGULARITY_GOD
+		boss_has_shield = false
+	elif "APEX" in b_up or "ANNIHILATOR" in b_up:
+		boss_kind = BossKind.APEX_ANNIHILATOR
+		boss_has_shield = false
+	elif "CHRONOS" in b_up or "DREADNOUGHT" in b_up:
+		boss_kind = BossKind.CHRONOS_DREADNOUGHT
+		boss_has_shield = false
+	elif "HIVE" in b_up or "HYDRA" in b_up or "TITÁN" in b_up or "TITAN" in b_up:
+		boss_kind = BossKind.HIVE_HYDRA
+		boss_has_shield = false
+	else:
+		boss_kind = BossKind.AEGIS_COLOSSUS
+		boss_has_shield = true
+		
+	var shape = get_node_or_null("CollisionShape2D")
+	if shape and shape.shape is CircleShape2D:
+		match boss_kind:
+			BossKind.AEGIS_COLOSSUS:
+				shape.shape.radius = 48.0
+			BossKind.HIVE_HYDRA:
+				shape.shape.radius = 50.0
+			BossKind.CHRONOS_DREADNOUGHT:
+				shape.shape.radius = 54.0
+			BossKind.APEX_ANNIHILATOR:
+				shape.shape.radius = 52.0
+			BossKind.OMEGA_SINGULARITY_GOD:
+				shape.shape.radius = 60.0
 
 func _exit_tree() -> void:
 	if is_instance_valid(overhead_bar_node):
@@ -146,6 +183,18 @@ func _physics_process(delta: float) -> void:
 				rotation = lerp_angle(rotation, move_dir.angle(), 4.0 * delta)
 			else:
 				rotation = lerp_angle(rotation, boss_laser_angle, 3.5 * delta)
+			
+			boss_anim_time += delta
+			queue_redraw()
+			
+			# Omega Singularity God: campo gravitacional activo hacia el centro del jefe
+			if boss_kind == BossKind.OMEGA_SINGULARITY_GOD and is_instance_valid(target_mecha):
+				var pull_dist: float = global_position.distance_to(target_mecha.global_position)
+				if pull_dist < 520.0 and pull_dist > 35.0:
+					var pull_dir: Vector2 = (global_position - target_mecha.global_position).normalized()
+					var pull_force: float = clamp(1.0 - (pull_dist / 520.0), 0.0, 1.0) * 85.0
+					target_mecha.global_position += pull_dir * pull_force * delta
+			
 			process_boss_attacks(delta, dir_to_mecha)
 
 func process_charger_behavior(delta: float, dist: float, dir_to_mecha: Vector2, separation: Vector2) -> void:
@@ -296,43 +345,65 @@ func process_boss_attacks(delta: float, dir_to_mecha: Vector2) -> void:
 		execute_next_boss_attack(dir_to_mecha)
 
 func execute_next_boss_attack(dir_to_mecha: Vector2) -> void:
-	var b_name_up := boss_name.to_upper()
 	boss_attack_pattern_index += 1
-	
-	if "CHRONOS" in b_name_up or "APEX" in b_name_up or "OMEGA" in b_name_up:
-		# Jefes Avanzados: Hyper-Láser, Danmaku Doble Espiral, EMP y Super-Novas
-		match boss_attack_pattern_index % 4:
-			0:
-				start_mega_laser(dir_to_mecha)
-			1:
-				start_danmaku_spiral(28)
-			2:
-				trigger_emp_shockwave()
-			3:
-				fire_nova_salvo(5, 0.7, dir_to_mecha)
-	elif "HIVE" in b_name_up or "TITÁN" in b_name_up or "TITAN" in b_name_up:
-		# Jefe Enjambre / Titán: Super-Novas triples, Danmaku y Pods Kamikaze
-		match boss_attack_pattern_index % 3:
-			0:
-				fire_nova_salvo(3, 0.5, dir_to_mecha)
-			1:
-				start_danmaku_spiral(22)
-			2:
-				spawn_kamikaze_drone_pod()
-	else:
-		# Aegis Colossus / Coloso Centinela: Escudo Égida + Salvas Nova + EMP + Danmaku radial
-		match boss_attack_pattern_index % 3:
-			0:
-				fire_nova_salvo(5, 0.75, dir_to_mecha)
-			1:
-				trigger_emp_shockwave()
-			2:
-				# Pulso radial danmaku 360° (12 proyectiles)
-				var bullet_count: int = 12
-				var angle_step: float = TAU / bullet_count
-				for i in range(bullet_count):
-					var angle: float = i * angle_step
-					fire_enemy_bullet_custom(Vector2(cos(angle), sin(angle)), "danmaku", Color(1.0, 0.35, 0.1), 220.0, 18.0)
+	match boss_kind:
+		BossKind.AEGIS_COLOSSUS:
+			match boss_attack_pattern_index % 3:
+				0:
+					fire_nova_salvo(5, 0.75, dir_to_mecha)
+				1:
+					trigger_emp_shockwave()
+				2:
+					var bullet_count: int = 14
+					var angle_step: float = TAU / float(bullet_count)
+					for i in range(bullet_count):
+						var angle: float = i * angle_step
+						fire_enemy_bullet_custom(Vector2(cos(angle), sin(angle)), "danmaku", Color(1.0, 0.35, 0.2), 220.0, 18.0)
+		BossKind.HIVE_HYDRA:
+			match boss_attack_pattern_index % 3:
+				0:
+					spawn_kamikaze_drone_pod()
+				1:
+					start_danmaku_spiral(24)
+				2:
+					fire_nova_salvo(4, 0.6, dir_to_mecha)
+		BossKind.CHRONOS_DREADNOUGHT:
+			match boss_attack_pattern_index % 3:
+				0:
+					start_mega_laser(dir_to_mecha)
+				1:
+					trigger_emp_shockwave()
+				2:
+					start_danmaku_spiral(28)
+		BossKind.APEX_ANNIHILATOR:
+			match boss_attack_pattern_index % 4:
+				0:
+					start_mega_laser(dir_to_mecha)
+				1:
+					fire_nova_salvo(7, 0.85, dir_to_mecha)
+				2:
+					start_danmaku_spiral(32)
+				3:
+					trigger_emp_shockwave()
+		BossKind.OMEGA_SINGULARITY_GOD:
+			match boss_attack_pattern_index % 5:
+				0:
+					start_mega_laser(dir_to_mecha)
+				1:
+					trigger_emp_shockwave()
+				2:
+					start_danmaku_spiral(36)
+				3:
+					fire_nova_salvo(9, 1.15, dir_to_mecha)
+				4:
+					# Cataclismo de pulsos radiales concéntricos dobles
+					for ring_idx in range(2):
+						var b_count: int = 16
+						var step: float = TAU / float(b_count)
+						var offset_ang: float = ring_idx * (PI / float(b_count))
+						for i in range(b_count):
+							var ang: float = i * step + offset_ang
+							fire_enemy_bullet_custom(Vector2(cos(ang), sin(ang)), "danmaku", Color(0.95, 0.25, 0.95), 210.0 + ring_idx * 45.0, 22.0)
 
 func fire_nova_salvo(count: int, spread: float, dir_to_mecha: Vector2) -> void:
 	var base_angle: float = dir_to_mecha.angle()
@@ -504,25 +575,11 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, 3.5, Color(1.0, 0.8, 0.2))
 
 		"boss":
-			var body_color := Color(1.0, 1.0, 1.0) if flash else Color(0.15, 0.12, 0.22)
-			var border_color := Color(1.0, 0.2, 0.5)
-			var pts := PackedVector2Array([
-				Vector2(44, 0), Vector2(32, 32), Vector2(0, 44), Vector2(-32, 32),
-				Vector2(-44, 0), Vector2(-32, -32), Vector2(0, -44), Vector2(32, -32)
-			])
-			draw_colored_polygon(pts, body_color)
-			draw_polyline(pts, border_color, 4.0)
+			draw_boss_chassis(flash)
 			
-			# Cañones montados
-			draw_rect(Rect2(36, -8, 16, 16), Color(1.0, 0.2, 0.4))
-			draw_rect(Rect2(26, 24, 12, 10), Color(0.8, 0.1, 0.3))
-			draw_rect(Rect2(26, -34, 12, 10), Color(0.8, 0.1, 0.3))
+			var accent_col: Color = get_boss_accent_color()
 
-			# Núcleo / Ojo colosal
-			draw_circle(Vector2.ZERO, 16.0, Color(1.0, 0.1, 0.4, 0.85))
-			draw_circle(Vector2.ZERO, 8.0, Color(1.0, 0.9, 0.2, 1.0))
-
-			# 1. Escudo Égida Frontal (120°)
+			# 1. Escudo Égida Frontal (120°) - Exclusivo de Aegis Colossus
 			if boss_has_shield:
 				var shield_col := Color(1.0, 1.0, 1.0, 0.95) if boss_shield_flash_timer > 0.0 else Color(0.1, 0.9, 0.6, 0.85)
 				draw_arc(Vector2.ZERO, 68.0, -PI / 3.0, PI / 3.0, 24, shield_col, 6.0)
@@ -531,33 +588,293 @@ func _draw() -> void:
 			# 2. Onda de Choque EMP Expansiva
 			if boss_emp_active:
 				var alpha: float = clamp(1.0 - (boss_emp_radius / boss_emp_max_radius), 0.0, 1.0)
-				draw_arc(Vector2.ZERO, boss_emp_radius, 0.0, TAU, 36, Color(0.2, 0.8, 1.0, alpha * 0.9), 5.0)
-				draw_circle(Vector2.ZERO, boss_emp_radius, Color(0.1, 0.6, 1.0, alpha * 0.12))
+				draw_arc(Vector2.ZERO, boss_emp_radius, 0.0, TAU, 36, Color(accent_col.r, accent_col.g, accent_col.b, alpha * 0.9), 5.0)
+				draw_circle(Vector2.ZERO, boss_emp_radius, Color(accent_col.r, accent_col.g, accent_col.b, alpha * 0.12))
 
 			# 3. Telegrafiado del Hyper-Láser (Carga con mira láser hacia el Mecha)
 			if boss_laser_state == BossLaserState.CHARGING:
 				var local_laser_dir := Vector2(cos(boss_laser_angle - rotation), sin(boss_laser_angle - rotation))
-				draw_line(Vector2.ZERO, local_laser_dir * 950.0, Color(1.0, 0.15, 0.25, 0.75), 2.5)
+				draw_line(Vector2.ZERO, local_laser_dir * 950.0, Color(accent_col.r, accent_col.g, accent_col.b, 0.75), 2.5)
 				if is_instance_valid(target_mecha):
 					var local_mecha_pos := to_local(target_mecha.global_position)
-					draw_arc(local_mecha_pos, 24.0, 0.0, TAU, 18, Color(1.0, 0.2, 0.2, 0.85), 2.0)
+					draw_arc(local_mecha_pos, 24.0, 0.0, TAU, 18, Color(accent_col.r, accent_col.g, accent_col.b, 0.85), 2.0)
 
 			# 4. Descarga de Hyper-Láser Devastador (44px)
 			if boss_laser_state == BossLaserState.FIRING:
 				var local_laser_dir := Vector2(cos(boss_laser_angle - rotation), sin(boss_laser_angle - rotation))
 				var beam_len: float = 980.0
-				# Corona exterior de plasma carmesí (44px)
-				draw_line(Vector2.ZERO, local_laser_dir * beam_len, Color(1.0, 0.1, 0.35, 0.35), 44.0)
-				# Haz intermedio rojo/magenta brillante (26px)
-				draw_line(Vector2.ZERO, local_laser_dir * beam_len, Color(1.0, 0.25, 0.45, 0.85), 26.0)
+				# Corona exterior de plasma con el color característico del jefe (44px)
+				draw_line(Vector2.ZERO, local_laser_dir * beam_len, Color(accent_col.r, accent_col.g, accent_col.b, 0.35), 44.0)
+				# Haz intermedio brillante (26px)
+				draw_line(Vector2.ZERO, local_laser_dir * beam_len, Color(accent_col.r, accent_col.g, accent_col.b, 0.85), 26.0)
 				# Núcleo blanco incandescente (12px)
 				draw_line(Vector2.ZERO, local_laser_dir * beam_len, Color(1.0, 1.0, 1.0, 1.0), 12.0)
 				# Destello de boca de cañón
-				draw_circle(local_laser_dir * 38.0, 22.0, Color(1.0, 0.9, 0.9, 0.9))
+				draw_circle(local_laser_dir * 38.0, 22.0, Color(1.0, 0.95, 0.95, 0.9))
+
+func get_boss_accent_color() -> Color:
+	match boss_kind:
+		BossKind.AEGIS_COLOSSUS:
+			return Color(1.0, 0.25, 0.35) # Rojo carmesí
+		BossKind.HIVE_HYDRA:
+			return Color(1.0, 0.75, 0.15) # Ámbar dorado
+		BossKind.CHRONOS_DREADNOUGHT:
+			return Color(0.75, 0.35, 1.0) # Púrpura cósmico
+		BossKind.APEX_ANNIHILATOR:
+			return Color(0.0, 0.85, 1.0)  # Cian cuántico
+		BossKind.OMEGA_SINGULARITY_GOD:
+			return Color(0.95, 0.2, 0.95) # Fucsia apocalíptico
+		_:
+			return Color(1.0, 0.2, 0.4)
+
+func draw_boss_chassis(flash: bool) -> void:
+	match boss_kind:
+		BossKind.AEGIS_COLOSSUS:
+			draw_aegis_colossus(flash)
+		BossKind.HIVE_HYDRA:
+			draw_hive_hydra(flash)
+		BossKind.CHRONOS_DREADNOUGHT:
+			draw_chronos_dreadnought(flash)
+		BossKind.APEX_ANNIHILATOR:
+			draw_apex_annihilator(flash)
+		BossKind.OMEGA_SINGULARITY_GOD:
+			draw_omega_singularity_god(flash)
+
+func draw_aegis_colossus(flash: bool) -> void:
+	var body_color := Color(1.0, 1.0, 1.0) if flash else Color(0.13, 0.15, 0.2)
+	var trim_color := Color(1.0, 0.25, 0.35)
+	var tread_color := Color(0.2, 0.22, 0.28)
+	var tread_border := Color(0.35, 0.38, 0.45)
+	
+	# 4 Orugas pesadas articuladas de asedio
+	var tread_rects := [
+		Rect2(6, -38, 26, 14),   # Frontal superior
+		Rect2(6, 24, 26, 14),    # Frontal inferior
+		Rect2(-34, -38, 26, 14), # Trasera superior
+		Rect2(-34, 24, 26, 14)   # Trasera inferior
+	]
+	for tr in tread_rects:
+		draw_rect(tr, tread_color)
+		draw_rect(tr, tread_border, false, 1.5)
+		# Estrías de orugas mecánicas
+		for k in range(3):
+			var x_line: float = tr.position.x + 5.0 + float(k) * 7.5
+			draw_line(Vector2(x_line, tr.position.y + 2), Vector2(x_line, tr.position.y + tr.size.y - 2), Color(0.12, 0.13, 0.16), 1.5)
+	
+	# Chasis pesado de carburo
+	var hull_pts := PackedVector2Array([
+		Vector2(34, -20), Vector2(34, 20), Vector2(10, 30), Vector2(-28, 28),
+		Vector2(-42, 14), Vector2(-42, -14), Vector2(-28, -28), Vector2(10, -30)
+	])
+	draw_colored_polygon(hull_pts, body_color)
+	draw_polyline(hull_pts, trim_color, 3.5)
+	
+	# Cañón de Riel Sísmico frontal colosal
+	draw_rect(Rect2(24, -9, 28, 18), Color(0.85, 0.18, 0.3))
+	draw_rect(Rect2(24, -9, 28, 18), trim_color, false, 2.0)
+	# Ventilaciones laterales de disipación
+	draw_rect(Rect2(18, -17, 10, 6), Color(0.95, 0.3, 0.2))
+	draw_rect(Rect2(18, 11, 10, 6), Color(0.95, 0.3, 0.2))
+	
+	# Núcleo / Reactor central de plasma carmesí
+	draw_circle(Vector2(-4, 0), 14.0, Color(0.9, 0.15, 0.3, 0.9))
+	draw_circle(Vector2(-4, 0), 7.0, Color(1.0, 0.85, 0.2))
+
+func draw_hive_hydra(flash: bool) -> void:
+	var body_color := Color(1.0, 1.0, 1.0) if flash else Color(0.11, 0.12, 0.17)
+	var trim_color := Color(1.0, 0.76, 0.18)
+	
+	# Alas Delta de Nave Nodriza
+	var wing_pts := PackedVector2Array([
+		Vector2(52, 0), Vector2(16, 26), Vector2(-24, 48), Vector2(-36, 32),
+		Vector2(-22, 12), Vector2(-44, 0), Vector2(-22, -12), Vector2(-36, -32),
+		Vector2(-24, -48), Vector2(16, -26)
+	])
+	draw_colored_polygon(wing_pts, body_color)
+	draw_polyline(wing_pts, trim_color, 3.0)
+	
+	# Bahías de Despliegue de Enjambre (Hangares en las alas)
+	var h_left := Rect2(-16, -32, 18, 10)
+	var h_right := Rect2(-16, 22, 18, 10)
+	draw_rect(h_left, Color(0.05, 0.06, 0.09))
+	draw_rect(h_left, trim_color, false, 1.5)
+	draw_rect(h_right, Color(0.05, 0.06, 0.09))
+	draw_rect(h_right, trim_color, false, 1.5)
+	
+	# Luces estroboscópicas de pista de despegue (Balizas parpadeantes)
+	var strobe: float = 0.4 + 0.6 * sin(boss_anim_time * 12.0)
+	draw_circle(Vector2(-10, -27), 2.5, Color(0.2, 0.85, 1.0, strobe))
+	draw_circle(Vector2(-10, 27), 2.5, Color(0.2, 0.85, 1.0, strobe))
+	
+	# Conduits energéticos que unen los tres núcleos solares
+	draw_line(Vector2(24, 0), Vector2(-4, -20), Color(1.0, 0.7, 0.15, 0.7), 2.0)
+	draw_line(Vector2(24, 0), Vector2(-4, 20), Color(1.0, 0.7, 0.15, 0.7), 2.0)
+	draw_line(Vector2(-4, -20), Vector2(-4, 20), Color(1.0, 0.7, 0.15, 0.4), 1.5)
+	
+	# Tri-Core Glowing Solar Eyes (3 Núcleos de Energía)
+	# 1. Ojo de proa apex
+	draw_circle(Vector2(24, 0), 10.0, Color(1.0, 0.6, 0.1, 0.9))
+	draw_circle(Vector2(24, 0), 5.0, Color(1.0, 0.95, 0.4))
+	# 2. Ojo ala babor (izquierda)
+	draw_circle(Vector2(-4, -20), 8.0, Color(1.0, 0.6, 0.1, 0.9))
+	draw_circle(Vector2(-4, -20), 3.5, Color(1.0, 0.95, 0.4))
+	# 3. Ojo ala estribor (derecha)
+	draw_circle(Vector2(-4, 20), 8.0, Color(1.0, 0.6, 0.1, 0.9))
+	draw_circle(Vector2(-4, 20), 3.5, Color(1.0, 0.95, 0.4))
+
+func draw_chronos_dreadnought(flash: bool) -> void:
+	var body_color := Color(1.0, 1.0, 1.0) if flash else Color(0.09, 0.07, 0.18)
+	var trim_color := Color(0.72, 0.35, 1.0)
+	var ring_color := Color(0.85, 0.55, 1.0)
+	
+	# Fortaleza Hexagonal Titánica
+	var hex_pts := PackedVector2Array()
+	for i in range(6):
+		var a := i * (TAU / 6.0)
+		hex_pts.append(Vector2(cos(a) * 46.0, sin(a) * 46.0))
+	draw_colored_polygon(hex_pts, body_color)
+	draw_polyline(hex_pts, trim_color, 3.5)
+	
+	# Placas de blindaje cronológico facetadas interiores
+	var inner_hex := PackedVector2Array()
+	for i in range(6):
+		var a := i * (TAU / 6.0)
+		inner_hex.append(Vector2(cos(a) * 36.0, sin(a) * 36.0))
+	draw_polyline(inner_hex, Color(0.5, 0.25, 0.8, 0.6), 1.5)
+	
+	# Cañones de riel cuánticos gemelos en la vanguardia
+	draw_rect(Rect2(36, -14, 22, 7), Color(0.5, 0.2, 0.75))
+	draw_rect(Rect2(36, -14, 22, 7), ring_color, false, 1.5)
+	draw_rect(Rect2(36, 7, 22, 7), Color(0.5, 0.2, 0.75))
+	draw_rect(Rect2(36, 7, 22, 7), ring_color, false, 1.5)
+	
+	# Anillos concéntricos de dilatación temporal (Giro perpetuo)
+	var r1_rot: float = boss_anim_time * 2.2
+	for i in range(3):
+		var arc_start: float = r1_rot + i * (TAU / 3.0)
+		draw_arc(Vector2.ZERO, 27.0, arc_start, arc_start + 1.2, 12, ring_color, 2.5)
+		
+	var r2_rot: float = -boss_anim_time * 3.4
+	for i in range(2):
+		var arc_start: float = r2_rot + i * PI
+		draw_arc(Vector2.ZERO, 19.0, arc_start, arc_start + 1.8, 10, Color(0.95, 0.75, 1.0), 2.0)
+		
+	# Núcleo de Singularidad de Antimateria expuesta
+	draw_circle(Vector2.ZERO, 13.0, Color(0.01, 0.01, 0.02))
+	draw_arc(Vector2.ZERO, 13.0, 0.0, TAU, 24, Color(0.85, 0.45, 1.0, 0.9), 2.0)
+	var star_pulse: float = 3.2 + 1.2 * sin(boss_anim_time * 8.0)
+	draw_circle(Vector2.ZERO, star_pulse, Color(1.0, 1.0, 1.0))
+
+func draw_apex_annihilator(flash: bool) -> void:
+	var body_color := Color(1.0, 1.0, 1.0) if flash else Color(0.06, 0.1, 0.16)
+	var trim_color := Color(0.0, 0.85, 1.0)
+	var wing_fill := Color(0.05, 0.22, 0.35, 0.85)
+	
+	# Alas de Plasma invertidas de alta frecuencia (Reverse-Sweep Wings)
+	var top_wing := PackedVector2Array([
+		Vector2(-8, -20), Vector2(-48, -48), Vector2(-54, -40), Vector2(-26, -14)
+	])
+	draw_colored_polygon(top_wing, wing_fill)
+	draw_polyline(top_wing, trim_color, 2.5)
+	draw_line(Vector2(-8, -20), Vector2(-48, -48), Color(0.7, 1.0, 1.0), 3.5)
+	
+	var bot_wing := PackedVector2Array([
+		Vector2(-8, 20), Vector2(-48, 48), Vector2(-54, 40), Vector2(-26, 14)
+	])
+	draw_colored_polygon(bot_wing, wing_fill)
+	draw_polyline(bot_wing, trim_color, 2.5)
+	draw_line(Vector2(-8, 20), Vector2(-48, 48), Color(0.7, 1.0, 1.0), 3.5)
+	
+	# Hombreras / Pauldrons acorazados trapezoidales
+	var top_p := PackedVector2Array([
+		Vector2(14, -34), Vector2(24, -20), Vector2(-12, -20), Vector2(-18, -32)
+	])
+	draw_colored_polygon(top_p, Color(0.1, 0.15, 0.22))
+	draw_polyline(top_p, trim_color, 1.8)
+	
+	var bot_p := PackedVector2Array([
+		Vector2(14, 34), Vector2(24, 20), Vector2(-12, 20), Vector2(-18, 32)
+	])
+	draw_colored_polygon(bot_p, Color(0.1, 0.15, 0.22))
+	draw_polyline(bot_p, trim_color, 1.8)
+	
+	# Cañones cuánticos gemelos montados en los flancos
+	draw_rect(Rect2(12, -27, 26, 8), Color(0.0, 0.65, 0.85))
+	draw_rect(Rect2(12, -27, 26, 8), trim_color, false, 1.5)
+	draw_rect(Rect2(12, 19, 26, 8), Color(0.0, 0.65, 0.85))
+	draw_rect(Rect2(12, 19, 26, 8), trim_color, false, 1.5)
+	
+	# Torso bípode aerodinámico de combate
+	var torso_pts := PackedVector2Array([
+		Vector2(36, 0), Vector2(20, 24), Vector2(-20, 20),
+		Vector2(-32, 0), Vector2(-20, -20), Vector2(20, -24)
+	])
+	draw_colored_polygon(torso_pts, body_color)
+	draw_polyline(torso_pts, trim_color, 3.5)
+	
+	# Reactor Cuántico Central (Rombo con pulsaciones electromagnéticas)
+	var reactor_pts := PackedVector2Array([
+		Vector2(12, 0), Vector2(3, 9), Vector2(-6, 0), Vector2(3, -9)
+	])
+	var react_pulse: float = 0.7 + 0.3 * sin(boss_anim_time * 8.0)
+	draw_colored_polygon(reactor_pts, Color(0.1, 0.9, 1.0, react_pulse))
+	draw_circle(Vector2(3, 0), 3.5, Color(1.0, 1.0, 1.0))
+
+func draw_omega_singularity_god(flash: bool) -> void:
+	var body_color := Color(1.0, 1.0, 1.0) if flash else Color(0.14, 0.05, 0.24)
+	var trim_color := Color(0.95, 0.2, 0.95)
+	
+	# 1. Halo Orbital Fractal Celestial (Anillo con 6 nodos estelares)
+	var halo_alpha: float = 0.5 + 0.3 * sin(boss_anim_time * 4.0)
+	draw_arc(Vector2.ZERO, 52.0, 0.0, TAU, 36, Color(0.95, 0.25, 0.95, halo_alpha), 2.0)
+	for i in range(6):
+		var node_ang: float = i * (TAU / 6.0) + (boss_anim_time * 1.6)
+		draw_circle(Vector2(cos(node_ang) * 52.0, sin(node_ang) * 52.0), 3.5, Color(1.0, 0.45, 0.9))
+		
+	# 2. Alas Cósmicas Etéreas con movimiento ondulatorio sinusoidal
+	var wave_t: float = sin(boss_anim_time * 2.8) * 8.0
+	var wave_c: float = cos(boss_anim_time * 2.8) * 8.0
+	
+	# Ala cósmica superior
+	var top_wing := PackedVector2Array([
+		Vector2(4, -16), Vector2(-36 + wave_c, -58 + wave_t), Vector2(-64, -38), Vector2(-24, -10)
+	])
+	draw_colored_polygon(top_wing, Color(0.42, 0.08, 0.52, 0.7))
+	draw_polyline(top_wing, trim_color, 2.5)
+	
+	# Ala cósmica inferior
+	var bot_wing := PackedVector2Array([
+		Vector2(4, 16), Vector2(-36 + wave_c, 58 - wave_t), Vector2(-64, 38), Vector2(-24, 10)
+	])
+	draw_colored_polygon(bot_wing, Color(0.42, 0.08, 0.52, 0.7))
+	draw_polyline(bot_wing, trim_color, 2.5)
+	
+	# Corona de cuernos celestiales posteriores
+	var horns := PackedVector2Array([
+		Vector2(-20, -14), Vector2(-60, 0), Vector2(-20, 14)
+	])
+	draw_polyline(horns, Color(1.0, 0.3, 0.6), 3.0)
+	
+	# 3. Avatar Diamante de la Deidad
+	var avatar_pts := PackedVector2Array([
+		Vector2(42, 0), Vector2(0, 32), Vector2(-34, 0), Vector2(0, -32)
+	])
+	draw_colored_polygon(avatar_pts, body_color)
+	draw_polyline(avatar_pts, trim_color, 3.5)
+	
+	# 4. Agujero Negro Central con Disco de Acreción turbulento
+	draw_arc(Vector2.ZERO, 20.0, boss_anim_time * 5.0, boss_anim_time * 5.0 + PI * 1.4, 20, Color(1.0, 0.15, 0.45, 0.85), 3.0)
+	draw_arc(Vector2.ZERO, 15.0, -boss_anim_time * 6.5, -boss_anim_time * 6.5 + PI * 1.3, 18, Color(0.9, 0.35, 1.0, 0.95), 2.5)
+	
+	# Horizonte de Sucesos (Negro absoluto y singularidad blanca pura)
+	draw_circle(Vector2.ZERO, 10.0, Color(0.01, 0.01, 0.02))
+	var sing_r: float = 3.0 + 1.0 * sin(boss_anim_time * 10.0)
+	draw_circle(Vector2.ZERO, sing_r, Color(1.0, 1.0, 1.0))
 
 func setup_boss_overhead_bar() -> void:
 	overhead_bar_node = BossOverheadBar.new(self)
-	overhead_bar_node.global_position = global_position + Vector2(0.0, -78.0)
+	var init_y: float = -92.0 if boss_kind == BossKind.OMEGA_SINGULARITY_GOD else (-86.0 if (boss_kind == BossKind.CHRONOS_DREADNOUGHT or boss_kind == BossKind.APEX_ANNIHILATOR) else -80.0)
+	overhead_bar_node.global_position = global_position + Vector2(0.0, init_y)
 	overhead_bar_node.global_rotation = 0.0
 	call_deferred("_attach_overhead_bar")
 
@@ -591,7 +908,13 @@ class BossOverheadBar extends Node2D:
 		if not is_instance_valid(boss) or not boss.is_inside_tree():
 			queue_free()
 			return
-		global_position = boss.global_position + Vector2(0.0, -78.0)
+		var y_off: float = -80.0
+		if "boss_kind" in boss:
+			if boss.boss_kind == BossKind.OMEGA_SINGULARITY_GOD:
+				y_off = -92.0
+			elif boss.boss_kind == BossKind.CHRONOS_DREADNOUGHT or boss.boss_kind == BossKind.APEX_ANNIHILATOR:
+				y_off = -86.0
+		global_position = boss.global_position + Vector2(0.0, y_off)
 		global_rotation = 0.0
 		
 		lag_hp = lerp(lag_hp, boss.current_health, 8.0 * delta)
