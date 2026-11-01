@@ -18,6 +18,12 @@ func _ready() -> void:
 		
 	if hud.has_signal("upgrade_selected"):
 		hud.upgrade_selected.connect(_on_upgrade_selected)
+		
+	hud.mecha_ref = mecha
+	if hud.has_signal("manual_input_changed"):
+		hud.manual_input_changed.connect(mecha.set_manual_input_vector)
+	if hud.has_signal("pilot_mode_changed"):
+		hud.pilot_mode_changed.connect(mecha.set_pilot_mode)
 
 func _on_mecha_level_up(new_level: int) -> void:
 	hud.show_upgrade_choices(new_level)

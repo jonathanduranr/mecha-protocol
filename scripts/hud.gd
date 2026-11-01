@@ -1,6 +1,8 @@
 extends CanvasLayer
 
 signal upgrade_selected(upgrade_id: String)
+signal manual_input_changed(vector: Vector2)
+signal pilot_mode_changed(mode: int)
 
 const API_BASE_URL: String = "https://mecha-leaderboard.jonathanduran.workers.dev"
 const SAVE_PATH: String = "user://pilot_profile.json"
@@ -14,7 +16,18 @@ const MEDAL_BRONZE := preload("res://assets/ui/medal_bronze.png")
 @onready var xp_bar: ProgressBar = $TopBar/XPBar
 @onready var level_label: Label = $TopBar/LevelLabel
 @onready var timer_label: Label = $TopBar/TimerLabel
+@onready var pilot_mode_btn: Button = $TopBar/PilotModeBtn
+@onready var joystick_overlay: Control = $TouchJoystickOverlay
 @onready var alert_label: Label = $AlertLabel
+
+var mecha_ref: Node2D = null
+var pilot_mode: int = 0 # 0: AUTO, 1: MANUAL
+var is_touch_dragging: bool = false
+var touch_drag_id: int = -1
+var joystick_center: Vector2 = Vector2.ZERO
+var joystick_current: Vector2 = Vector2.ZERO
+var joystick_vector: Vector2 = Vector2.ZERO
+var joystick_fade: float = 0.0
 
 @onready var upgrade_panel: Control = $UpgradePanel
 @onready var cards_container: VBoxContainer = $UpgradePanel/CenterContainer/VBoxContainer/CardsContainer
@@ -189,6 +202,10 @@ func _ready() -> void:
 	pilot_input.gui_input.connect(_on_pilot_input_gui_input)
 	pilot_input.text_submitted.connect(func(text_val): apply_new_pilot_name(text_val))
 	
+	if is_instance_valid(pilot_mode_btn):
+		pilot_mode_btn.pressed.connect(_on_pilot_mode_btn_pressed)
+		update_pilot_mode_ui()
+	
 	http_request.request_completed.connect(_on_http_request_completed)
 	load_profile()
 	pilot_input.text = current_pilot_name
@@ -216,12 +233,102 @@ func fetch_initial_leaderboard() -> void:
 	http_request.cancel_request()
 	var _err := http_request.request(url, ["Accept: application/json"], HTTPClient.METHOD_GET)
 
+func _on_pilot_mode_btn_pressed() -> void:
+	pilot_mode = 1 if pilot_mode == 0 else 0
+	emit_signal("pilot_mode_changed", pilot_mode)
+	update_pilot_mode_ui()
+
+func update_pilot_mode_ui() -> void:
+	if not is_instance_valid(pilot_mode_btn):
+		return
+	if pilot_mode == 1:
+		pilot_mode_btn.text = "🎮 PILOTO: MANUAL"
+		pilot_mode_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	else:
+		var is_overriding := is_touch_dragging
+		if is_instance_valid(mecha_ref) and mecha_ref.has_method("is_manually_controlled"):
+			is_overriding = is_overriding or mecha_ref.is_manually_controlled()
+		if is_overriding:
+			pilot_mode_btn.text = "⚡ MANUAL OVERRIDE"
+			pilot_mode_btn.add_theme_color_override("font_color", Color(1.0, 0.72, 0.2))
+		else:
+			pilot_mode_btn.text = "🤖 PILOTO: AUTO"
+			pilot_mode_btn.add_theme_color_override("font_color", Color(0.2, 0.9, 1.0))
+
 func _process(delta: float) -> void:
 	if not get_tree().paused:
 		elapsed_seconds += delta
 		var minutes := int(elapsed_seconds) / 60
 		var seconds := int(elapsed_seconds) % 60
 		timer_label.text = "%02d:%02d" % [minutes, seconds]
+
+	# Actualización visual del joystick táctil
+	if is_touch_dragging:
+		joystick_fade = min(1.0, joystick_fade + delta * 8.0)
+	else:
+		joystick_fade = max(0.0, joystick_fade - delta * 4.0)
+		
+	if is_instance_valid(joystick_overlay) and joystick_overlay.has_method("update_joystick"):
+		joystick_overlay.update_joystick(is_touch_dragging, joystick_center, joystick_current, joystick_fade)
+		
+	update_pilot_mode_ui()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if start_panel.visible or upgrade_panel.visible or game_over_panel.visible:
+		if is_touch_dragging:
+			is_touch_dragging = false
+			joystick_vector = Vector2.ZERO
+			emit_signal("manual_input_changed", Vector2.ZERO)
+		return
+		
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			is_touch_dragging = true
+			touch_drag_id = event.index
+			joystick_center = event.position
+			joystick_current = event.position
+			joystick_vector = Vector2.ZERO
+			joystick_fade = 1.0
+		elif event.index == touch_drag_id:
+			is_touch_dragging = false
+			touch_drag_id = -1
+			joystick_vector = Vector2.ZERO
+			emit_signal("manual_input_changed", Vector2.ZERO)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			is_touch_dragging = true
+			touch_drag_id = -1
+			joystick_center = event.position
+			joystick_current = event.position
+			joystick_vector = Vector2.ZERO
+			joystick_fade = 1.0
+		else:
+			is_touch_dragging = false
+			joystick_vector = Vector2.ZERO
+			emit_signal("manual_input_changed", Vector2.ZERO)
+	elif event is InputEventScreenDrag:
+		if is_touch_dragging and event.index == touch_drag_id:
+			_process_drag_pos(event.position)
+	elif event is InputEventMouseMotion:
+		if is_touch_dragging and touch_drag_id == -1:
+			_process_drag_pos(event.position)
+
+func _process_drag_pos(target_pos: Vector2) -> void:
+	var delta_v := target_pos - joystick_center
+	var max_dist: float = 70.0
+	var dist: float = delta_v.length()
+	if dist > max_dist:
+		joystick_current = joystick_center + delta_v.normalized() * max_dist
+	else:
+		joystick_current = target_pos
+		
+	var deadzone: float = 8.0
+	if dist > deadzone:
+		var intensity: float = clamp((dist - deadzone) / (max_dist - deadzone), 0.0, 1.0)
+		joystick_vector = delta_v.normalized() * intensity
+	else:
+		joystick_vector = Vector2.ZERO
+	emit_signal("manual_input_changed", joystick_vector)
 
 func update_health(current: float, max_val: float) -> void:
 	health_bar.max_value = max_val

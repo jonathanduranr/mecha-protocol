@@ -38,6 +38,43 @@ var bullet_count: int = 1
 var damage_multiplier: float = 1.0
 var speed_multiplier: float = 1.0
 
+# Sistema de Piloto (Manual / Automático)
+enum PilotMode { AUTO, MANUAL }
+var pilot_mode: int = PilotMode.AUTO
+var manual_input_vector: Vector2 = Vector2.ZERO
+var manual_grace_timer: float = 0.0
+
+func set_manual_input_vector(vec: Vector2) -> void:
+	manual_input_vector = vec
+	if vec.length_squared() > 0.01:
+		manual_grace_timer = 0.55
+
+func set_pilot_mode(mode: int) -> void:
+	pilot_mode = mode
+
+func get_keyboard_input_vector() -> Vector2:
+	var k := Vector2.ZERO
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+		k.y -= 1.0
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+		k.y += 1.0
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+		k.x -= 1.0
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+		k.x += 1.0
+	return k.normalized()
+
+func get_effective_manual_direction() -> Vector2:
+	var k_vec := get_keyboard_input_vector()
+	if k_vec.length_squared() > 0.01:
+		return k_vec
+	if manual_input_vector.length_squared() > 0.01:
+		return manual_input_vector
+	return Vector2.ZERO
+
+func is_manually_controlled() -> bool:
+	return get_effective_manual_direction().length_squared() > 0.01 or manual_grace_timer > 0.0
+
 # Evoluciones Ultimate de Arquetipos
 var has_ultimate_beam: bool = false
 var beam_level: int = 0 # 1: 1 rayo frontal, 2: 2 rayos duales, 3: 3 rayos prismáticos
@@ -128,11 +165,28 @@ func _physics_process(delta: float) -> void:
 				_trigger_security_violation("Discrepancia en comprobación de integridad HEAP")
 				return
 		
-	# 1. IA DE SUPERVIVENCIA Y NAVEGACIÓN
-	var desired_direction: Vector2 = calculate_steering_direction()
-	var target_velocity := desired_direction * (base_speed * speed_multiplier)
+	# 1. NAVEGACIÓN Y PILOTAJE (Híbrido Manual / Automático)
+	var active_manual_dir := get_effective_manual_direction()
+	var desired_direction := Vector2.ZERO
 	
-	current_velocity = current_velocity.lerp(target_velocity, 8.0 * delta)
+	if active_manual_dir.length_squared() > 0.01:
+		manual_grace_timer = 0.55
+		desired_direction = active_manual_dir
+	elif manual_grace_timer > 0.0:
+		manual_grace_timer -= delta
+		if pilot_mode == PilotMode.AUTO and manual_grace_timer <= 0.0:
+			desired_direction = calculate_steering_direction()
+		else:
+			desired_direction = Vector2.ZERO
+	else:
+		if pilot_mode == PilotMode.AUTO:
+			desired_direction = calculate_steering_direction()
+		else:
+			desired_direction = Vector2.ZERO
+			
+	var target_velocity := desired_direction * (base_speed * speed_multiplier)
+	var lerp_weight: float = 12.0 if is_manually_controlled() else 8.0
+	current_velocity = current_velocity.lerp(target_velocity, lerp_weight * delta)
 	global_position += current_velocity * delta
 	
 	# Límites de la arena
@@ -873,6 +927,14 @@ func _draw() -> void:
 		Vector2(-12, -14),
 		Vector2(8, -14)
 	])
+	
+	# Propulsores manuales activos (Fogonazo de plasma ámbar en toberas traseras)
+	if is_manually_controlled() and current_velocity.length_squared() > 400.0:
+		var thrust_flicker: float = sin(electric_anim_time * 14.0) * 4.0
+		for off_y in [-8.0, 8.0]:
+			draw_line(Vector2(-14, off_y), Vector2(-24 - thrust_flicker, off_y), Color(1.0, 0.75, 0.2, 0.85), 3.5)
+			draw_line(Vector2(-14, off_y), Vector2(-19 - thrust_flicker * 0.5, off_y), Color(1.0, 1.0, 1.0), 1.8)
+
 	draw_colored_polygon(chassis_points, Color(0.12, 0.16, 0.24, 1.0))
 	var border_color := Color(1.0, 0.85, 0.2, 1.0) if has_ultimate_beam else Color(0.2, 0.9, 1.0, 1.0)
 	draw_polyline(chassis_points, border_color, 2.0)
