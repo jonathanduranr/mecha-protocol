@@ -1,6 +1,7 @@
 extends Area2D
 
 @export var xp_value: int = 10
+@export var heal_value: float = 0.0
 @export var magnet_speed: float = 750.0
 
 var target: Node2D = null
@@ -36,6 +37,8 @@ func _physics_process(delta: float) -> void:
 				if get_tree().get_nodes_in_group("scraps").size() > 20:
 					if target.has_method("gain_xp"):
 						target.gain_xp(xp_value)
+					if heal_value > 0.0 and target.has_method("heal"):
+						target.heal(heal_value)
 					if "absorb_pulse" in target:
 						target.absorb_pulse = 0.16
 					queue_free()
@@ -69,6 +72,8 @@ func _physics_process(delta: float) -> void:
 			if orbit_timer <= 0.0 or orbit_dist <= 22.0:
 				if target.has_method("gain_xp"):
 					target.gain_xp(xp_value)
+				if heal_value > 0.0 and target.has_method("heal"):
+					target.heal(heal_value)
 				if "absorb_pulse" in target:
 					target.absorb_pulse = 0.16
 				queue_free()
@@ -81,6 +86,17 @@ func _physics_process(delta: float) -> void:
 		global_position += dir * magnet_speed * delta
 
 func _draw() -> void:
+	if heal_value > 0.0:
+		# Cápsula de Nanoreparación (Verde esmeralda neón)
+		var pulse: float = 0.7 + 0.3 * sin(Time.get_ticks_msec() * 0.008)
+		draw_circle(Vector2.ZERO, 14.0 * pulse, Color(0.1, 1.0, 0.45, 0.25))
+		draw_circle(Vector2.ZERO, 8.0, Color(0.1, 0.95, 0.4, 0.95))
+		draw_circle(Vector2.ZERO, 4.0, Color(1.0, 1.0, 1.0, 1.0))
+		# Cruz médica cibernética
+		draw_line(Vector2(-5, 0), Vector2(5, 0), Color.WHITE, 2.0)
+		draw_line(Vector2(0, -5), Vector2(0, 5), Color.WHITE, 2.0)
+		return
+
 	if is_in_tornado:
 		# Estela de fricción de plasma púrpura
 		for i in range(trail_history.size() - 1):
@@ -113,6 +129,9 @@ func attract_to(mecha_node: Node2D) -> void:
 	is_attracted = true
 
 func _on_area_entered(area: Area2D) -> void:
-	if not is_in_tornado and area.has_method("gain_xp"):
-		area.gain_xp(xp_value)
+	if not is_in_tornado:
+		if area.has_method("gain_xp"):
+			area.gain_xp(xp_value)
+		if heal_value > 0.0 and area.has_method("heal"):
+			area.heal(heal_value)
 		queue_free()

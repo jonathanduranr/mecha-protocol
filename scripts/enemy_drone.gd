@@ -134,7 +134,7 @@ func setup_type() -> void:
 			if shape: shape.radius = 18.0
 		"boss":
 			speed = 75.0
-			contact_damage = 55.0
+			contact_damage = 30.0
 			xp_reward = 1500
 			knockback_resistance = 1.0
 			if shape: shape.radius = 48.0
@@ -328,8 +328,8 @@ func process_boss_attacks(delta: float, dir_to_mecha: Vector2) -> void:
 			boss_danmaku_count += 1
 			var ang1: float = boss_danmaku_count * 0.28
 			var ang2: float = -boss_danmaku_count * 0.28
-			fire_enemy_bullet_custom(Vector2(cos(ang1), sin(ang1)), "danmaku", Color(0.75, 0.4, 1.0), 210.0, 16.0)
-			fire_enemy_bullet_custom(Vector2(cos(ang2), sin(ang2)), "danmaku", Color(1.0, 0.2, 0.4), 210.0, 16.0)
+			fire_enemy_bullet_custom(Vector2(cos(ang1), sin(ang1)), "danmaku", Color(0.75, 0.4, 1.0), 210.0, 14.0)
+			fire_enemy_bullet_custom(Vector2(cos(ang2), sin(ang2)), "danmaku", Color(1.0, 0.2, 0.4), 210.0, 14.0)
 			if boss_danmaku_count >= boss_danmaku_max:
 				boss_danmaku_active = false
 
@@ -366,7 +366,7 @@ func execute_next_boss_attack(dir_to_mecha: Vector2) -> void:
 				1:
 					start_danmaku_spiral(24)
 				2:
-					fire_nova_salvo(4, 0.6, dir_to_mecha)
+					fire_nova_salvo(4, 0.75, dir_to_mecha)
 		BossKind.CHRONOS_DREADNOUGHT:
 			match boss_attack_pattern_index % 3:
 				0:
@@ -411,7 +411,7 @@ func fire_nova_salvo(count: int, spread: float, dir_to_mecha: Vector2) -> void:
 	var angle_step: float = spread / max(1, count - 1) if count > 1 else 0.0
 	for i in range(count):
 		var ang: float = start_angle + (i * angle_step) if count > 1 else base_angle
-		fire_enemy_bullet_custom(Vector2(cos(ang), sin(ang)), "nova", Color(1.0, 0.45, 0.0), 220.0, 45.0)
+		fire_enemy_bullet_custom(Vector2(cos(ang), sin(ang)), "nova", Color(1.0, 0.45, 0.0), 220.0, 24.0)
 
 func trigger_emp_shockwave() -> void:
 	boss_emp_active = true
@@ -516,8 +516,29 @@ func die() -> void:
 			scrap.xp_value = shard_xp
 			scrap.global_position = global_position + Vector2(cos(angle), sin(angle)) * 36.0
 			get_parent().add_child(scrap)
+			
+		# Núcleo Supremo de Nanoreparación (Restaura el 50% de HP)
+		var core = scrap_scene.instantiate()
+		core.xp_value = 150
+		core.heal_value = 60.0
+		core.global_position = global_position
+		get_parent().add_child(core)
+		
 		queue_free()
 		return
+
+	# Drones menores: probabilidad de cápsula de nanoreparación (3.5% base, 6.5% si salud crítica)
+	var heal_chance: float = 0.035
+	if is_instance_valid(target_mecha):
+		var hp_ratio: float = target_mecha.current_health / max(1.0, target_mecha.max_health)
+		if hp_ratio < 0.45:
+			heal_chance = 0.065
+	if randf() < heal_chance:
+		var med_scrap = scrap_scene.instantiate()
+		med_scrap.xp_value = 5
+		med_scrap.heal_value = 22.0
+		med_scrap.global_position = global_position + Vector2(randf_range(-10, 10), randf_range(-10, 10))
+		get_parent().add_child(med_scrap)
 
 	var scrap = scrap_scene.instantiate()
 	scrap.xp_value = xp_reward

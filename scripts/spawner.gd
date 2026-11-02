@@ -6,9 +6,8 @@ var elapsed_time: float = 0.0
 var squad_timer: float = 0.8
 var next_swarm_time: float = 40.0
 
-var boss_spawned_3m: bool = false
-var boss_spawned_6m: bool = false
 var beam_surge_notified: bool = false
+var pending_boss_level: int = 0
 var spawned_level_bosses: Dictionary = {
 	10: false,
 	20: false,
@@ -61,10 +60,16 @@ func _ready() -> void:
 	if is_instance_valid(mecha) and mecha.has_signal("level_up"):
 		mecha.level_up.connect(_on_mecha_level_up)
 
+func is_boss_alive() -> bool:
+	var enemies := get_tree().get_nodes_in_group("enemies")
+	for e in enemies:
+		if is_instance_valid(e) and e.get("drone_type") == "boss":
+			return true
+	return false
+
 func _on_mecha_level_up(lvl: int) -> void:
 	if lvl in spawned_level_bosses and not spawned_level_bosses[lvl]:
-		spawned_level_bosses[lvl] = true
-		spawn_level_boss(lvl)
+		pending_boss_level = lvl
 
 func spawn_level_boss(lvl: int) -> void:
 	var v_size := get_viewport_rect().size
@@ -75,23 +80,23 @@ func spawn_level_boss(lvl: int) -> void:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 10: AEGIS COLOSSUS (MK. I) [!]")
 			spawn_drone_at_pos(spawn_pos, "boss", 5000.0, "AEGIS COLOSSUS (MK. I)")
-			for i in range(6):
-				var angle := i * (TAU / 6.0)
-				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 85.0, "tank", 220.0)
+			for i in range(4):
+				var angle := i * (TAU / 4.0)
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 85.0, "tank", 180.0)
 		20:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 20: HIVE HYDRA (MK. II) [!]")
 			spawn_drone_at_pos(spawn_pos, "boss", 10000.0, "HIVE HYDRA (MK. II)")
-			for i in range(12):
-				var angle := i * (TAU / 12.0)
-				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 95.0, "swarm", 70.0)
+			for i in range(6):
+				var angle := i * (TAU / 6.0)
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 95.0, "swarm", 50.0)
 		30:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 30: CHRONOS DREADNOUGHT (MK. III) [!]")
 			spawn_drone_at_pos(spawn_pos, "boss", 15000.0, "CHRONOS DREADNOUGHT (MK. III)")
-			for i in range(8):
-				var angle := i * (TAU / 8.0)
-				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 105.0, "shooter", 180.0)
+			for i in range(5):
+				var angle := i * (TAU / 5.0)
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 105.0, "shooter", 140.0)
 		40:
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] AMENAZA NIVEL 40: APEX ANNIHILATOR (MK. IV) [!]")
@@ -105,32 +110,31 @@ func _physics_process(delta: float) -> void:
 	elapsed_time += delta
 	squad_timer -= delta
 	
-	# Eventos de Enjambres Periódicos (Frecuencia ajustada por nivel y ultimates)
+	# Despliegue de Jefes por Nivel garantizando sólo 1 jefe activo a la vez
+	if pending_boss_level > 0 and not is_boss_alive():
+		var b_lvl := pending_boss_level
+		pending_boss_level = 0
+		spawned_level_bosses[b_lvl] = true
+		spawn_level_boss(b_lvl)
+	
+	# Eventos de Enjambres Periódicos (Pausados durante combates de jefes)
 	if elapsed_time >= next_swarm_time:
-		trigger_swarm_event()
-		var density: float = get_horde_density_multiplier()
-		var delay_range: Vector2 = Vector2(26.0, 34.0) if density >= 1.7 else Vector2(38.0, 46.0)
-		next_swarm_time = elapsed_time + randf_range(delay_range.x, delay_range.y)
+		if is_boss_alive():
+			next_swarm_time = elapsed_time + 25.0
+		else:
+			trigger_swarm_event()
+			var density: float = get_horde_density_multiplier()
+			var delay_range: Vector2 = Vector2(26.0, 34.0) if density >= 1.7 else Vector2(38.0, 46.0)
+			next_swarm_time = elapsed_time + randf_range(delay_range.x, delay_range.y)
 	
-	# Eventos de Jefes por tiempo
-	if elapsed_time >= 180.0 and not boss_spawned_3m:
-		boss_spawned_3m = true
-		if hud and hud.has_method("show_alert"):
-			hud.show_alert("[!] COLOSO CENTINELA DETECTADO [!]")
-		spawn_boss_with_escort(5000.0, "COLOSO CENTINELA (MK. I)")
-		
-	if elapsed_time >= 360.0 and not boss_spawned_6m:
-		boss_spawned_6m = true
-		if hud and hud.has_method("show_alert"):
-			hud.show_alert("[!] TITAN DE ASALTO MK-II DETECTADO [!]")
-		spawn_boss_with_escort(10000.0, "TITÁN DE ASALTO (MK. II)")
-	
-	# Spawner de Escuadrones Tácticos por Intervalos (Frecuencia dinámica)
+	# Spawner de Escuadrones Tácticos por Intervalos (Frecuencia moderada durante jefes)
 	if squad_timer <= 0:
 		spawn_tactical_squad()
 		var density: float = get_horde_density_multiplier()
 		var base_pause: float = max(0.55, 2.2 - (elapsed_time * 0.005))
 		var pause: float = max(0.55, base_pause / sqrt(density))
+		if is_boss_alive():
+			pause *= 2.2 # 55% menos frecuencia de horda durante el jefe
 		squad_timer = pause
 
 ## Selecciona y despliega una formación táctica escalada por Nivel y Ultimates
@@ -147,6 +151,8 @@ func spawn_tactical_squad() -> void:
 	var v_size := get_viewport_rect().size
 	var formation_type: int = randi() % 4
 	var density: float = get_horde_density_multiplier()
+	if is_boss_alive():
+		density *= 0.5 # Alivio de horda durante duelo de jefe
 	
 	# Escalado de vida según el tiempo transcurrido
 	var scout_hp: float = 35.0 + (elapsed_time * 0.45)
@@ -302,16 +308,6 @@ func spawn_shooter_patrol(shooter_hp: float, guard_hp: float, density: float = 1
 	var guard_step := 150.0 / float(guard_count + 1)
 	for i in range(guard_count):
 		spawn_drone_at_pos(Vector2(x_pos - 75.0 + (i + 1) * guard_step, -20.0), "scout", guard_hp)
-
-## Jefe Titán con escolta de honor
-func spawn_boss_with_escort(boss_hp: float, custom_name: String = "COLOSO CENTINELA (MK. I)") -> void:
-	var v_size := get_viewport_rect().size
-	var spawn_pos := Vector2(v_size.x * 0.5, -80.0)
-	spawn_drone_at_pos(spawn_pos, "boss", boss_hp, custom_name)
-	# Escuadra de 8 scouts de escolta
-	for i in range(8):
-		var angle := i * (TAU / 8.0)
-		spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 75.0, "scout", 90.0)
 
 ## Evento Masivo de Enjambre (Frecuencia y cantidad escalada)
 func trigger_swarm_event() -> void:
