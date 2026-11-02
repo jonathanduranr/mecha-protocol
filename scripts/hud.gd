@@ -11,6 +11,7 @@ const SECRET_SALT: String = "mp_cyber_core_sig_99x8172b"
 const MEDAL_GOLD := preload("res://assets/ui/medal_gold.png")
 const MEDAL_SILVER := preload("res://assets/ui/medal_silver.png")
 const MEDAL_BRONZE := preload("res://assets/ui/medal_bronze.png")
+const ICON_PLAY := preload("res://assets/ui/icons/icon_play.svg")
 
 @onready var health_bar: ProgressBar = $TopBar/HealthBar
 @onready var xp_bar: ProgressBar = $TopBar/XPBar
@@ -684,6 +685,7 @@ func _on_http_request_completed(_result: int, response_code: int, _headers: Pack
 		err_msg = str(data["reason"])
 	status_label.text = "[!] " + err_msg
 	status_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+	render_leaderboard([])
 
 func render_leaderboard(all_rows: Array) -> void:
 	# Podio de inicio: Top 10
@@ -882,7 +884,7 @@ func _setup_button_play_icon(btn: Button, label_text: String) -> void:
 	hbox.add_child(bracket_left)
 	
 	var icon_rect := TextureRect.new()
-	icon_rect.texture = preload("res://assets/ui/icons/icon_play.svg")
+	icon_rect.texture = ICON_PLAY
 	icon_rect.custom_minimum_size = Vector2(24, 24)
 	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

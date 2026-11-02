@@ -5,6 +5,7 @@ extends Node2D
 @onready var spawner: Node2D = $Spawner
 
 func _ready() -> void:
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	if mecha.has_signal("health_changed"):
 		mecha.health_changed.connect(hud.update_health)
 	if mecha.has_signal("xp_changed"):

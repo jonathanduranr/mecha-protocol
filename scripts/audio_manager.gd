@@ -26,8 +26,9 @@ var user_interacted: bool = false
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS # Funciona incluso si el juego está en pausa
 	
-	# Evitar que la pantalla se bloquee o entre en reposo (iOS, Android, etc.)
+	# Evitar que la pantalla se bloquee o entre en reposo (iOS, Android, etc.) y forzar orientación
 	DisplayServer.screen_set_keep_on(true)
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	if OS.has_feature("web"):
 		_request_web_wake_lock()
 	

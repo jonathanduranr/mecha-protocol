@@ -7,8 +7,39 @@ cd "$DIR"
 echo "=== 1. Exporting Xcode project from Godot ==="
 godot --headless --path ../.. --export-release "iOS" "$DIR/MechaProtocol.ipa"
 
-echo "=== 2. Adjusting Code Signing in project.pbxproj ==="
+echo "=== 2. Adjusting Code Signing & Sanitizing Info.plist ==="
 sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Distribution";/CODE_SIGN_IDENTITY = "Apple Development";/g' MechaProtocol.xcodeproj/project.pbxproj
+
+python3 -c '
+import plistlib
+plist_path = "MechaProtocol/MechaProtocol-Info.plist"
+with open(plist_path, "rb") as f:
+    pl = plistlib.load(f)
+
+# 1. Eliminar permisos innecesarios con cadenas vacías (prevención de rechazos y crashes de seguridad)
+for key in ["NSCameraUsageDescription", "NSPhotoLibraryUsageDescription", "NSMicrophoneUsageDescription"]:
+    pl.pop(key, None)
+
+# 2. Orientaciones para iPhone
+pl["UISupportedInterfaceOrientations"] = [
+    "UIInterfaceOrientationPortrait",
+    "UIInterfaceOrientationPortraitUpsideDown"
+]
+
+# 3. Orientaciones para iPad (Evita crash fatal UIApplicationInvalidInterfaceOrientation si Apple prueba en iPad horizontal)
+pl["UISupportedInterfaceOrientations~ipad"] = [
+    "UIInterfaceOrientationPortrait",
+    "UIInterfaceOrientationPortraitUpsideDown",
+    "UIInterfaceOrientationLandscapeLeft",
+    "UIInterfaceOrientationLandscapeRight"
+]
+
+pl["UIRequiresFullScreen"] = True
+
+with open(plist_path, "wb") as f:
+    plistlib.dump(pl, f)
+print("MechaProtocol-Info.plist sanitizado exitosamente.")
+'
 
 echo "=== 3. Creating Release Archive ==="
 xcodebuild archive \
