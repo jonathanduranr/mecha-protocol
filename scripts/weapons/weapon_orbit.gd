@@ -64,15 +64,14 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func check_collisions() -> void:
+	var enemies := get_tree().get_nodes_in_group("enemies")
 	var hit_radius_sq: float = 18.0 * 18.0
 	
 	for i in range(active_drones):
 		var angle := current_angle + (i * (TAU / active_drones))
 		var drone_pos := global_position + Vector2(cos(angle), sin(angle)) * orbit_radius
-		var enemies: Array = CombatManager.get_nearby_enemies(drone_pos, 22.0) if CombatManager else get_tree().get_nodes_in_group("enemies")
 		
-		for enemy_node: Node in enemies:
-			var enemy := enemy_node as Node2D
+		for enemy in enemies:
 			if not is_instance_valid(enemy):
 				continue
 			var instance_id: int = enemy.get_instance_id()

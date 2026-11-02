@@ -21,7 +21,6 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 
 AudioManager="*res://scripts/audio_manager.gd"
-CombatManager="*res://scripts/combat_manager.gd"
 
 [display]
 

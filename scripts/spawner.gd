@@ -23,7 +23,7 @@ func get_horde_density_multiplier() -> float:
 		return 1.0
 		
 	# 1. Escalado Progresivo por Nivel del Mecha (Opción 2)
-	var lvl: int = int(mecha.get("level")) if "level" in mecha else 1
+	var lvl: int = mecha.level
 	var level_mult: float = 1.0
 	if lvl >= 30:
 		level_mult = 1.80 + (lvl - 30) * 0.04
@@ -36,20 +36,20 @@ func get_horde_density_multiplier() -> float:
 		
 	# 2. Escalado por Ultimates Desbloqueadas (Opción 3)
 	var ult_mult: float = 1.0
-	if mecha.get("has_ultimate_beam") == true:
-		var b_lvl: int = int(mecha.get("beam_level")) if "beam_level" in mecha else 1
+	if mecha.has_ultimate_beam:
+		var b_lvl: int = mecha.beam_level if "beam_level" in mecha else 1
 		ult_mult += 0.25 * float(b_lvl) # Progresivo: Nv 1 (+25%), Nv 2 (+50%), Nv 3 (+75%)
 		if b_lvl >= 3 and not beam_surge_notified:
 			beam_surge_notified = true
 			if hud and hud.has_method("show_alert"):
 				hud.show_alert("[!] ALERTA: RESPUESTA DE ENJAMBRE OMEGA ACTIVADA [!]")
-	if mecha.get("has_ultimate_singularity") == true:
+	if mecha.has_ultimate_singularity:
 		ult_mult += 0.30
-	if mecha.get("has_ultimate_vortex") == true:
+	if mecha.has_ultimate_vortex:
 		ult_mult += 0.30
-	if mecha.get("has_ultimate_trail") == true:
+	if mecha.has_ultimate_trail:
 		ult_mult += 0.25
-	if mecha.get("has_ultimate_aegis") == true:
+	if mecha.has_ultimate_aegis:
 		ult_mult += 0.25
 		
 	return level_mult * ult_mult

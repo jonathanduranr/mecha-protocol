@@ -1,8 +1,8 @@
 extends Node2D
 
-@onready var mecha = $Mecha
-@onready var hud = $HUD
-@onready var spawner = $Spawner
+@onready var mecha: Node2D = $Mecha
+@onready var hud: CanvasLayer = $HUD
+@onready var spawner: Node2D = $Spawner
 
 func _ready() -> void:
 	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
@@ -20,7 +20,7 @@ func _ready() -> void:
 	if hud.has_signal("upgrade_selected"):
 		hud.upgrade_selected.connect(_on_upgrade_selected)
 		
-	hud.set("mecha_ref", mecha)
+	hud.mecha_ref = mecha
 	if hud.has_signal("manual_input_changed"):
 		hud.manual_input_changed.connect(mecha.set_manual_input_vector)
 	if hud.has_signal("pilot_mode_changed"):

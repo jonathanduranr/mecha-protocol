@@ -40,13 +40,6 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	global_position += direction * speed * delta
-	
-	# Despawn inmediato si sale de la pantalla visible (+60px de margen)
-	var v_rect := get_viewport_rect()
-	if not v_rect.grow(60.0).has_point(global_position):
-		queue_free()
-		return
-		
 	if bullet_type == "nova":
 		pulse_time += delta * 8.0
 		queue_redraw()

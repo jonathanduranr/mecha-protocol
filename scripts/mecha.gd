@@ -42,11 +42,6 @@ var bullet_count: int = 1
 var damage_multiplier: float = 1.0
 var speed_multiplier: float = 1.0
 
-# Caché y temporizadores de alto rendimiento para enjambres masivos
-var magnet_check_timer: float = 0.0
-var scrap_cache_timer: float = 0.0
-var cached_closest_scrap: Node2D = null
-
 # Sistema de Piloto (Manual / Automático)
 enum PilotMode { AUTO, MANUAL }
 var pilot_mode: int = PilotMode.AUTO
@@ -232,11 +227,8 @@ func _physics_process(delta: float) -> void:
 			# Escaneo de radar / centinela: rota lentamente buscando objetivos sin temblar
 			rotation += 1.3 * delta
 
-	# 3. IMÁN DE CHATARRA (optimizado a 12 Hz para evitar caídas de FPS)
-	magnet_check_timer -= delta
-	if magnet_check_timer <= 0.0:
-		magnet_check_timer = 0.08
-		check_scrap_magnet()
+	# 3. IMÁN DE CHATARRA
+	check_scrap_magnet()
 	
 	# 4. EVOLUCIONES SUPREMAS (ULTIMATES)
 	process_ultimates(delta)
@@ -289,7 +281,7 @@ func process_ultimate_beam(delta: float, aim_dir: Vector2) -> void:
 	if beam_tick_timer <= 0.0:
 		beam_tick_timer = get_beam_tick_interval()
 		var tick_damage: float = 32.0 * damage_multiplier
-		var enemies: Array = CombatManager.all_enemies if CombatManager else get_tree().get_nodes_in_group("enemies")
+		var enemies := get_tree().get_nodes_in_group("enemies")
 		var hit_enemies: Dictionary = {}
 		var beam_angles: Array[float] = get_beam_angles()
 		
@@ -354,7 +346,8 @@ func process_singularities(delta: float) -> void:
 			"tick_timer": 0.0
 		})
 
-	var scraps: Array = CombatManager.all_scraps if CombatManager else get_tree().get_nodes_in_group("scraps")
+	var enemies := get_tree().get_nodes_in_group("enemies")
+	var scraps := get_tree().get_nodes_in_group("scraps")
 	
 	for i in range(active_singularities.size() - 1, -1, -1):
 		var s: Dictionary = active_singularities[i]
@@ -362,11 +355,9 @@ func process_singularities(delta: float) -> void:
 		s.tick_timer -= delta
 		var s_pos: Vector2 = s.pos
 		var s_radius: float = s.radius
-		var nearby_enemies: Array = CombatManager.get_nearby_enemies(s_pos, s_radius) if CombatManager else get_tree().get_nodes_in_group("enemies")
 		
 		# Succión gravitacional de enemigos hacia el núcleo
-		for enemy_node: Node in nearby_enemies:
-			var enemy := enemy_node as Node2D
+		for enemy in enemies:
 			if not is_instance_valid(enemy):
 				continue
 			var dist: float = enemy.global_position.distance_to(s_pos)
@@ -387,16 +378,14 @@ func process_singularities(delta: float) -> void:
 		# Daño continuo por compresión en el horizonte de sucesos
 		if s.tick_timer <= 0.0:
 			s.tick_timer = 0.12
-			for enemy_node: Node in nearby_enemies:
-				var enemy := enemy_node as Node2D
+			for enemy in enemies:
 				if is_instance_valid(enemy) and enemy.global_position.distance_to(s_pos) < 65.0:
 					enemy.take_damage(16.0 * damage_multiplier, (enemy.global_position - s_pos).normalized(), 20.0)
 
 		# Colapso final en Supernova / Implosión cataclísmica
 		if s.time >= s.max_time:
 			AudioManager.play_ram_explosion()
-			for enemy_node: Node in nearby_enemies:
-				var enemy := enemy_node as Node2D
+			for enemy in enemies:
 				if is_instance_valid(enemy):
 					var dist_e: float = enemy.global_position.distance_to(s_pos)
 					if dist_e <= 170.0:
@@ -435,10 +424,9 @@ func process_kinetic_trail(delta: float) -> void:
 	# Evasión de micro-dash si hay peligro inminente de enjambre
 	dash_cooldown -= delta
 	if dash_cooldown <= 0.0:
-		var nearby_threats: Array = CombatManager.get_nearby_enemies(global_position, 110.0) if CombatManager else get_tree().get_nodes_in_group("enemies")
+		var enemies := get_tree().get_nodes_in_group("enemies")
 		var is_threatened := false
-		for enemy_node: Node in nearby_threats:
-			var enemy := enemy_node as Node2D
+		for enemy in enemies:
 			if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < 110.0:
 				is_threatened = true
 				break
@@ -446,7 +434,8 @@ func process_kinetic_trail(delta: float) -> void:
 			dash_cooldown = 4.2
 			perform_ion_dash()
 
-	# Daño de fuego esmeralda a enemigos que pisen la estela (consultando solo enemigos cercanos por punto)
+	# Daño de fuego esmeralda a enemigos que pisen la estela
+	var enemies := get_tree().get_nodes_in_group("enemies")
 	for i in range(active_trails.size() - 1, -1, -1):
 		var tr: Dictionary = active_trails[i]
 		tr.life -= delta
@@ -455,9 +444,7 @@ func process_kinetic_trail(delta: float) -> void:
 			continue
 			
 		var tr_pos: Vector2 = tr.pos
-		var trail_enemies: Array = CombatManager.get_nearby_enemies(tr_pos, 28.0) if CombatManager else get_tree().get_nodes_in_group("enemies")
-		for enemy_node: Node in trail_enemies:
-			var enemy := enemy_node as Node2D
+		for enemy in enemies:
 			if is_instance_valid(enemy) and enemy.global_position.distance_to(tr_pos) < 26.0:
 				enemy.take_damage(26.0 * damage_multiplier * delta * 5.0, (enemy.global_position - tr_pos).normalized(), 15.0)
 
@@ -490,14 +477,13 @@ func activate_ultimate_vortex() -> void:
 
 func process_orbital_vortex(delta: float) -> void:
 	vortex_angle += delta * 4.6
+	var enemies := get_tree().get_nodes_in_group("enemies")
 	
 	for i in range(VORTEX_BLADES):
 		var blade_ang := vortex_angle + (i * TAU / VORTEX_BLADES)
 		var blade_global := global_position + Vector2(cos(blade_ang), sin(blade_ang)) * VORTEX_RADIUS
-		var nearby_enemies: Array = CombatManager.get_nearby_enemies(blade_global, 26.0) if CombatManager else get_tree().get_nodes_in_group("enemies")
 		
-		for enemy_node: Node in nearby_enemies:
-			var enemy := enemy_node as Node2D
+		for enemy in enemies:
 			if is_instance_valid(enemy) and enemy.global_position.distance_to(blade_global) < 22.0:
 				var hit_dir: Vector2 = (enemy.global_position - global_position).normalized()
 				enemy.take_damage(28.0 * damage_multiplier, hit_dir, 45.0)
@@ -598,80 +584,86 @@ func calculate_steering_direction() -> Vector2:
 	var scrap_force := Vector2.ZERO
 	var boundary_force := Vector2.ZERO
 	
+	var enemies := get_tree().get_nodes_in_group("enemies")
 	var enemy_count_in_danger: int = 0
 	var boss_present_nearby: bool = false
-	var boss_node: Node2D = CombatManager.active_boss if CombatManager else null
+	var boss_node: Node2D = null
 	var boss_dist: float = 99999.0
 	
-	# 1. Detección y evasión táctica del Jefe (sin recorrer 300 enemigos)
-	if is_instance_valid(boss_node) and is_target_on_screen(boss_node):
-		boss_dist = global_position.distance_to(boss_node.global_position)
-		if boss_dist < boss_danger_radius and boss_dist > 0.01:
-			boss_present_nearby = true
-			enemy_count_in_danger += 3
-			var push_away: Vector2 = (global_position - boss_node.global_position).normalized()
-			
-			# 1. Repulsión radial calibrada para mantener distancia de seguridad
-			var boss_repulsion_weight: float = 0.0
-			if boss_dist < boss_critical_radius:
-				# Rango crítico (< 250px): empuje de retroceso de emergencia máximo
-				boss_repulsion_weight = 4.8 * (1.0 - (boss_dist / boss_critical_radius)) + 2.8
-			else:
-				# Rango táctico (250px a 430px): repulsión firme para sostener la distancia óptima (~360px)
-				var span: float = max(1.0, boss_danger_radius - boss_critical_radius)
-				boss_repulsion_weight = pow(1.0 - ((boss_dist - boss_critical_radius) / span), 1.3) * 2.8
-			avoidance_force += push_away * boss_repulsion_weight
-			
-			# 2. Órbita Táctica y Flanqueo Lateral (Strafing / Kiting)
-			if boss_dist < 400.0:
-				var tan1: Vector2 = Vector2(-push_away.y, push_away.x)
-				var tan2: Vector2 = Vector2(push_away.y, -push_away.x)
-				var v_size: Vector2 = get_viewport_rect().size
-				var arena_center: Vector2 = v_size * 0.5
-				var p1: Vector2 = global_position + tan1 * 90.0
-				var p2: Vector2 = global_position + tan2 * 90.0
-				var d1: float = p1.distance_to(arena_center)
-				var d2: float = p2.distance_to(arena_center)
-				if abs(d1 - d2) > 25.0:
-					boss_orbit_clockwise = (d1 <= d2)
-				var chosen_tan: Vector2 = tan1 if boss_orbit_clockwise else tan2
-				var strafe_factor: float = clampf((400.0 - boss_dist) / 160.0, 0.4, 1.2)
-				avoidance_force += chosen_tan * (2.6 * strafe_factor)
-				
-			# 3. Evasión anticipada del Mega Hyper-Láser (Esquivar la línea roja de fuego)
-			var laser_state: Variant = boss_node.get("boss_laser_state")
-			if laser_state != null and int(laser_state) != 0: # CHARGING (1) o FIRING (2)
-				var l_angle: float = float(boss_node.get("boss_laser_angle"))
-				var l_dir: Vector2 = Vector2.from_angle(l_angle)
-				var to_mecha: Vector2 = global_position - boss_node.global_position
-				var forward_proj: float = to_mecha.dot(l_dir)
-				if forward_proj > 0.0 and forward_proj < 1050.0:
-					var closest_beam_pt: Vector2 = boss_node.global_position + l_dir * forward_proj
-					var dist_to_beam: float = global_position.distance_to(closest_beam_pt)
-					if dist_to_beam < 130.0:
-						var dodge_dir: Vector2 = (global_position - closest_beam_pt).normalized()
-						if dodge_dir.length_squared() < 0.01:
-							dodge_dir = Vector2(-l_dir.y, l_dir.x)
-						var dodge_weight: float = clampf((1.0 - (dist_to_beam / 130.0)) * 5.5, 2.5, 6.0)
-						avoidance_force += dodge_dir * dodge_weight
-						
-			# 4. Evasión de Onda de Choque EMP Expansiva
-			var emp_active: Variant = boss_node.get("boss_emp_active")
-			if emp_active == true and boss_dist < 320.0:
-				avoidance_force += push_away * 3.6
-
-	# 2. Drones menores (consultando únicamente los enemigos dentro de danger_radius en la grilla)
-	var nearby_drones: Array = CombatManager.get_nearby_enemies(global_position, danger_radius) if CombatManager else get_tree().get_nodes_in_group("enemies")
-	for enemy_node: Node in nearby_drones:
+	for enemy_node: Node in enemies:
 		var enemy := enemy_node as Node2D
-		if not is_instance_valid(enemy) or enemy == boss_node or not is_target_on_screen(enemy):
+		if not is_instance_valid(enemy) or not is_target_on_screen(enemy):
 			continue
 		var dist: float = global_position.distance_to(enemy.global_position)
-		if dist < danger_radius and dist > 0.01:
-			var push_away: Vector2 = (global_position - enemy.global_position).normalized()
-			var weight: float = (1.0 - (dist / danger_radius)) * 2.2
-			avoidance_force += push_away * weight
-			enemy_count_in_danger += 1
+		var is_boss: bool = (enemy.get("drone_type") == "boss")
+		
+		if is_boss:
+			if dist < boss_dist:
+				boss_dist = dist
+				boss_node = enemy
+				
+			if dist < boss_danger_radius and dist > 0.01:
+				boss_present_nearby = true
+				enemy_count_in_danger += 3
+				var push_away: Vector2 = (global_position - enemy.global_position).normalized()
+				
+				# 1. Repulsión radial calibrada para mantener distancia de seguridad
+				var boss_repulsion_weight: float = 0.0
+				if dist < boss_critical_radius:
+					# Rango crítico (< 250px): empuje de retroceso de emergencia máximo
+					boss_repulsion_weight = 4.8 * (1.0 - (dist / boss_critical_radius)) + 2.8
+				else:
+					# Rango táctico (250px a 430px): repulsión firme para sostener la distancia óptima (~360px)
+					var span: float = max(1.0, boss_danger_radius - boss_critical_radius)
+					boss_repulsion_weight = pow(1.0 - ((dist - boss_critical_radius) / span), 1.3) * 2.8
+				avoidance_force += push_away * boss_repulsion_weight
+				
+				# 2. Órbita Táctica y Flanqueo Lateral (Strafing / Kiting):
+				# En lugar de retroceder en línea recta contra la pared, el Mecha orbita al jefe
+				# a distancia segura, castigando sus flancos y eludiendo escudos frontales.
+				if dist < 400.0:
+					var tan1: Vector2 = Vector2(-push_away.y, push_away.x)
+					var tan2: Vector2 = Vector2(push_away.y, -push_away.x)
+					var v_size: Vector2 = get_viewport_rect().size
+					var arena_center: Vector2 = v_size * 0.5
+					var p1: Vector2 = global_position + tan1 * 90.0
+					var p2: Vector2 = global_position + tan2 * 90.0
+					var d1: float = p1.distance_to(arena_center)
+					var d2: float = p2.distance_to(arena_center)
+					if abs(d1 - d2) > 25.0:
+						boss_orbit_clockwise = (d1 <= d2)
+					var chosen_tan: Vector2 = tan1 if boss_orbit_clockwise else tan2
+					var strafe_factor: float = clampf((400.0 - dist) / 160.0, 0.4, 1.2)
+					avoidance_force += chosen_tan * (2.6 * strafe_factor)
+					
+				# 3. Evasión anticipada del Mega Hyper-Láser (Esquivar la línea roja de fuego)
+				var laser_state: Variant = enemy.get("boss_laser_state")
+				if laser_state != null and int(laser_state) != 0: # CHARGING (1) o FIRING (2)
+					var l_angle: float = float(enemy.get("boss_laser_angle"))
+					var l_dir: Vector2 = Vector2.from_angle(l_angle)
+					var to_mecha: Vector2 = global_position - enemy.global_position
+					var forward_proj: float = to_mecha.dot(l_dir)
+					if forward_proj > 0.0 and forward_proj < 1050.0:
+						var closest_beam_pt: Vector2 = enemy.global_position + l_dir * forward_proj
+						var dist_to_beam: float = global_position.distance_to(closest_beam_pt)
+						if dist_to_beam < 130.0:
+							var dodge_dir: Vector2 = (global_position - closest_beam_pt).normalized()
+							if dodge_dir.length_squared() < 0.01:
+								dodge_dir = Vector2(-l_dir.y, l_dir.x)
+							var dodge_weight: float = clampf((1.0 - (dist_to_beam / 130.0)) * 5.5, 2.5, 6.0)
+							avoidance_force += dodge_dir * dodge_weight
+							
+				# 4. Evasión de Onda de Choque EMP Expansiva
+				var emp_active: Variant = enemy.get("boss_emp_active")
+				if emp_active == true and dist < 320.0:
+					avoidance_force += push_away * 3.6
+		else:
+			# Drones menores (scout, tank, swarm, shooter)
+			if dist < danger_radius and dist > 0.01:
+				var push_away: Vector2 = (global_position - enemy.global_position).normalized()
+				var weight: float = (1.0 - (dist / danger_radius)) * 2.2
+				avoidance_force += push_away * weight
+				enemy_count_in_danger += 1
 			
 	# Evasión táctica de proyectiles enemigos
 	var enemy_bullets := get_tree().get_nodes_in_group("enemy_bullets")
@@ -747,57 +739,43 @@ func calculate_steering_direction() -> Vector2:
 	return total_vector
 
 func get_closest_enemy() -> Node2D:
+	var enemies := get_tree().get_nodes_in_group("enemies")
 	var closest: Node2D = null
 	var min_score: float = 999999.0
-	
-	# Prioridad táctica directa al Jefe activo si está en pantalla
-	var boss: Node2D = CombatManager.active_boss if CombatManager else null
-	if is_instance_valid(boss) and is_target_on_screen(boss):
-		var b_dist := global_position.distance_to(boss.global_position)
-		if b_dist <= sensor_range:
-			min_score = b_dist * 0.58
-			closest = boss
-
-	var enemies: Array = CombatManager.get_nearby_enemies(global_position, sensor_range) if CombatManager else get_tree().get_nodes_in_group("enemies")
 	for enemy_node: Node in enemies:
 		var enemy := enemy_node as Node2D
-		if is_instance_valid(enemy) and enemy != boss and is_target_on_screen(enemy):
+		if is_instance_valid(enemy) and is_target_on_screen(enemy):
 			var dist: float = global_position.distance_to(enemy.global_position)
 			if dist > sensor_range:
 				continue
 			var score: float = dist
+			# Si es un jefe, le otorgamos alta prioridad de fijación táctica de armas
+			# a menos que un dron menor esté a quemarropa (< 160px) amenazando colisión
+			if enemy.get("drone_type") == "boss":
+				score = dist * 0.58
 			if score < min_score:
 				min_score = score
 				closest = enemy
 	return closest
 
 func get_closest_scrap() -> Node2D:
-	scrap_cache_timer -= 0.016
-	if scrap_cache_timer > 0.0 and is_instance_valid(cached_closest_scrap) and not cached_closest_scrap.get("is_attracted"):
-		return cached_closest_scrap
-		
-	scrap_cache_timer = 0.12
-	var scraps: Array = CombatManager.all_scraps if CombatManager else get_tree().get_nodes_in_group("scraps")
+	var scraps := get_tree().get_nodes_in_group("scraps")
 	var closest: Node2D = null
-	var min_dist_sq: float = 2000.0 * 2000.0
-	for sc_node: Node in scraps:
-		var scrap := sc_node as Node2D
-		if is_instance_valid(scrap) and not scrap.get("is_attracted"):
-			var d_sq := global_position.distance_squared_to(scrap.global_position)
-			if d_sq < min_dist_sq:
-				min_dist_sq = d_sq
+	var min_dist: float = 2000.0
+	for scrap in scraps:
+		if is_instance_valid(scrap):
+			var dist := global_position.distance_to(scrap.global_position)
+			if dist < min_dist:
+				min_dist = dist
 				closest = scrap
-	cached_closest_scrap = closest
 	return closest
 
 func check_scrap_magnet() -> void:
-	var scraps: Array = CombatManager.all_scraps if CombatManager else get_tree().get_nodes_in_group("scraps")
-	var m_rad_sq: float = magnet_radius * magnet_radius
-	for sc_node: Node in scraps:
-		var scrap := sc_node as Node2D
-		if is_instance_valid(scrap) and not scrap.get("is_attracted") and scrap.has_method("attract_to"):
-			var d_sq := global_position.distance_squared_to(scrap.global_position)
-			if d_sq <= m_rad_sq:
+	var scraps := get_tree().get_nodes_in_group("scraps")
+	for scrap in scraps:
+		if is_instance_valid(scrap) and scrap.has_method("attract_to"):
+			var dist := global_position.distance_to(scrap.global_position)
+			if dist <= magnet_radius:
 				scrap.attract_to(self)
 
 func is_target_on_screen(target_node: Node2D) -> bool:

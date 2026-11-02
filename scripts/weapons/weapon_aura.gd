@@ -59,11 +59,10 @@ func trigger_electric_pulse() -> void:
 	visual_pulse_timer = 0.12 # Duración del flash visual
 	queue_redraw()
 	
-	var enemies: Array = CombatManager.get_nearby_enemies(global_position, aura_radius) if CombatManager else get_tree().get_nodes_in_group("enemies")
+	var enemies := get_tree().get_nodes_in_group("enemies")
 	var radius_sq := aura_radius * aura_radius
 	
-	for enemy_node: Node in enemies:
-		var enemy := enemy_node as Node2D
+	for enemy in enemies:
 		if is_instance_valid(enemy):
 			if global_position.distance_squared_to(enemy.global_position) <= radius_sq:
 				if enemy.has_method("take_damage"):

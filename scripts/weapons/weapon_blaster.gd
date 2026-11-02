@@ -89,11 +89,10 @@ func spawn_bullet(pos: Vector2, dir: Vector2) -> void:
 	get_parent().get_parent().get_parent().add_child(bullet)
 
 func get_closest_enemy() -> Node2D:
-	var enemies: Array = CombatManager.get_nearby_enemies(global_position, sensor_range) if CombatManager else get_tree().get_nodes_in_group("enemies")
+	var enemies := get_tree().get_nodes_in_group("enemies")
 	var closest: Node2D = null
 	var min_dist: float = sensor_range
-	for enemy_node: Node in enemies:
-		var enemy := enemy_node as Node2D
+	for enemy in enemies:
 		if is_instance_valid(enemy) and is_target_on_screen(enemy):
 			var dist := global_position.distance_to(enemy.global_position)
 			if dist < min_dist:
