@@ -445,8 +445,12 @@ func process_kinetic_trail(delta: float) -> void:
 			
 		var tr_pos: Vector2 = tr.pos
 		for enemy in enemies:
-			if is_instance_valid(enemy) and enemy.global_position.distance_to(tr_pos) < 26.0:
-				enemy.take_damage(26.0 * damage_multiplier * delta * 5.0, (enemy.global_position - tr_pos).normalized(), 15.0)
+			if is_instance_valid(enemy):
+				var e_pos: Vector2 = enemy.global_position
+				if abs(e_pos.x - tr_pos.x) > 26.0 or abs(e_pos.y - tr_pos.y) > 26.0:
+					continue
+				if e_pos.distance_squared_to(tr_pos) < 26.0 * 26.0:
+					enemy.take_damage(26.0 * damage_multiplier * delta * 5.0, (e_pos - tr_pos).normalized(), 15.0)
 
 func perform_ion_dash() -> void:
 	var dash_dir := current_velocity.normalized()
@@ -772,10 +776,11 @@ func get_closest_scrap() -> Node2D:
 
 func check_scrap_magnet() -> void:
 	var scraps := get_tree().get_nodes_in_group("scraps")
+	var m_sq: float = magnet_radius * magnet_radius
 	for scrap in scraps:
-		if is_instance_valid(scrap) and scrap.has_method("attract_to"):
-			var dist := global_position.distance_to(scrap.global_position)
-			if dist <= magnet_radius:
+		if is_instance_valid(scrap) and not scrap.get("is_attracted") and scrap.has_method("attract_to"):
+			var dist_sq := global_position.distance_squared_to(scrap.global_position)
+			if dist_sq <= m_sq:
 				scrap.attract_to(self)
 
 func is_target_on_screen(target_node: Node2D) -> bool:

@@ -138,6 +138,12 @@ func spawn_tactical_squad() -> void:
 	if not is_instance_valid(mecha):
 		return
 		
+	# Cap de seguridad de rendimiento: si la pantalla ya tiene un enjambre masivo (120+ enemigos),
+	# la arena ya está completamente repleta. Se espera brevemente a que el jugador destruya drones.
+	if get_tree().get_nodes_in_group("enemies").size() >= 120:
+		squad_timer = 0.35
+		return
+		
 	var v_size := get_viewport_rect().size
 	var formation_type: int = randi() % 4
 	var density: float = get_horde_density_multiplier()

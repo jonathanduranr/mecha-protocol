@@ -32,6 +32,14 @@ func _physics_process(delta: float) -> void:
 			var to_mecha: Vector2 = target.global_position - global_position
 			var dist: float = to_mecha.length()
 			if dist <= 185.0:
+				# Optimización: si ya hay un torbellino visual completo, devorar directamente para evitar saturación
+				if get_tree().get_nodes_in_group("scraps").size() > 20:
+					if target.has_method("gain_xp"):
+						target.gain_xp(xp_value)
+					if "absorb_pulse" in target:
+						target.absorb_pulse = 0.16
+					queue_free()
+					return
 				is_in_tornado = true
 				orbit_angle = atan2(global_position.y - target.global_position.y, global_position.x - target.global_position.x)
 				orbit_dist = dist
@@ -56,18 +64,6 @@ func _physics_process(delta: float) -> void:
 			trail_history.append(global_position)
 			if trail_history.size() > 6:
 				trail_history.remove_at(0)
-				
-			# Daño cortante de metralla a drones en trayectoria
-			hit_cooldown -= delta
-			if hit_cooldown <= 0.0:
-				var enemies := get_tree().get_nodes_in_group("enemies")
-				for enemy in enemies:
-					if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < 24.0:
-						var push_dir: Vector2 = (enemy.global_position - target.global_position).normalized()
-						var dmg_mult: float = float(target.get("damage_multiplier")) if ("damage_multiplier" in target) else 1.0
-						enemy.take_damage(26.0 * dmg_mult, push_dir, 40.0)
-						hit_cooldown = 0.08
-						break
 						
 			# Devoración en el núcleo cuántico
 			if orbit_timer <= 0.0 or orbit_dist <= 22.0:

@@ -449,6 +449,11 @@ func spawn_kamikaze_drone_pod() -> void:
 		get_parent().add_child(pod)
 
 func calculate_flock_separation() -> Vector2:
+	# Si el dron todavía está fuera de la pantalla (en área de spawn), no gasta CPU en separación
+	var v_rect := get_viewport_rect()
+	if not v_rect.has_point(global_position):
+		return Vector2.ZERO
+		
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var separation_force := Vector2.ZERO
 	var neighbor_count: int = 0
@@ -458,9 +463,15 @@ func calculate_flock_separation() -> Vector2:
 	for other in enemies:
 		if other == self or not is_instance_valid(other):
 			continue
-		var dist_sq := global_position.distance_squared_to(other.global_position)
+		var o_pos: Vector2 = other.global_position
+		# Descarte ultrarrápido por coordenadas antes de calcular distancias
+		if abs(global_position.x - o_pos.x) > desired_separation:
+			continue
+		if abs(global_position.y - o_pos.y) > desired_separation:
+			continue
+		var dist_sq := global_position.distance_squared_to(o_pos)
 		if dist_sq < desired_sep_sq and dist_sq > 0.01:
-			var diff: Vector2 = (global_position - other.global_position).normalized()
+			var diff: Vector2 = (global_position - o_pos).normalized()
 			separation_force += diff / sqrt(dist_sq)
 			neighbor_count += 1
 			if neighbor_count >= 5: # Límite para rendimiento óptimo
