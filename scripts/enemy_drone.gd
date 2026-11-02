@@ -49,6 +49,8 @@ var boss_danmaku_max: int = 24
 
 var boss_has_shield: bool = false
 var boss_shield_flash_timer: float = 0.0
+var separation_timer: float = 0.0
+var cached_separation: Vector2 = Vector2.ZERO
 @export var boss_name: String = "COLOSO CENTINELA":
 	set(val):
 		boss_name = val
@@ -64,6 +66,7 @@ func _ready() -> void:
 	current_health = max_health
 	collision_layer = 2  # Layer 2: Enemies
 	collision_mask = 5   # Layer 1: Mecha, Layer 3: Bullets
+	separation_timer = randf_range(0.0, 0.08)
 	
 	if drone_type == "boss":
 		update_boss_kind()
@@ -155,8 +158,12 @@ func _physics_process(delta: float) -> void:
 	var dist_to_mecha := global_position.distance_to(target_mecha.global_position)
 	var dir_to_mecha := (target_mecha.global_position - global_position).normalized()
 	
-	# Separación de enjambre (Evitar que se apilen encima unos de otros)
-	var separation := calculate_flock_separation()
+	# Separación de enjambre escalonada y optimizada con Spatial Grid (evita caídas de FPS)
+	separation_timer -= delta
+	if separation_timer <= 0.0:
+		separation_timer = 0.08
+		cached_separation = calculate_flock_separation()
+	var separation := cached_separation
 	
 	match drone_type:
 		"scout", "tank":
@@ -449,13 +456,19 @@ func spawn_kamikaze_drone_pod() -> void:
 		get_parent().add_child(pod)
 
 func calculate_flock_separation() -> Vector2:
-	var enemies := get_tree().get_nodes_in_group("enemies")
-	var separation_force := Vector2.ZERO
-	var neighbor_count: int = 0
 	var desired_separation: float = 34.0
 	var desired_sep_sq := desired_separation * desired_separation
+	var nearby: Array = []
+	if CombatManager:
+		nearby = CombatManager.get_nearby_enemies(global_position, desired_separation)
+	else:
+		nearby = get_tree().get_nodes_in_group("enemies")
+		
+	var separation_force := Vector2.ZERO
+	var neighbor_count: int = 0
 	
-	for other in enemies:
+	for other_node: Node in nearby:
+		var other := other_node as Node2D
 		if other == self or not is_instance_valid(other):
 			continue
 		var dist_sq := global_position.distance_squared_to(other.global_position)
@@ -463,7 +476,7 @@ func calculate_flock_separation() -> Vector2:
 			var diff: Vector2 = (global_position - other.global_position).normalized()
 			separation_force += diff / sqrt(dist_sq)
 			neighbor_count += 1
-			if neighbor_count >= 5: # Límite para rendimiento óptimo
+			if neighbor_count >= 4: # Límite para rendimiento óptimo
 				break
 				
 	return separation_force.normalized()
@@ -501,17 +514,24 @@ func die() -> void:
 		var shard_xp: int = max(50, int(xp_reward / shard_count))
 		for i in range(shard_count):
 			var angle := i * (TAU / shard_count)
-			var scrap = scrap_scene.instantiate()
-			scrap.xp_value = shard_xp
-			scrap.global_position = global_position + Vector2(cos(angle), sin(angle)) * 36.0
-			get_parent().add_child(scrap)
+			var shard_pos := global_position + Vector2(cos(angle), sin(angle)) * 36.0
+			if CombatManager:
+				CombatManager.spawn_or_merge_scrap(shard_pos, shard_xp, get_parent())
+			else:
+				var scrap = scrap_scene.instantiate()
+				scrap.xp_value = shard_xp
+				scrap.global_position = shard_pos
+				get_parent().add_child(scrap)
 		queue_free()
 		return
 
-	var scrap = scrap_scene.instantiate()
-	scrap.xp_value = xp_reward
-	scrap.global_position = global_position
-	get_parent().add_child(scrap)
+	if CombatManager:
+		CombatManager.spawn_or_merge_scrap(global_position, xp_reward, get_parent())
+	else:
+		var scrap = scrap_scene.instantiate()
+		scrap.xp_value = xp_reward
+		scrap.global_position = global_position
+		get_parent().add_child(scrap)
 	queue_free()
 
 func on_rammed_mecha() -> void:

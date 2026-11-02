@@ -60,7 +60,7 @@ func _physics_process(delta: float) -> void:
 			# Daño cortante de metralla a drones en trayectoria
 			hit_cooldown -= delta
 			if hit_cooldown <= 0.0:
-				var enemies := get_tree().get_nodes_in_group("enemies")
+				var enemies: Array = CombatManager.get_nearby_enemies(global_position, 28.0) if CombatManager else get_tree().get_nodes_in_group("enemies")
 				for enemy in enemies:
 					if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < 24.0:
 						var push_dir: Vector2 = (enemy.global_position - target.global_position).normalized()
