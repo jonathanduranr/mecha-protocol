@@ -48,6 +48,11 @@ var pilot_mode: int = PilotMode.AUTO
 var manual_input_vector: Vector2 = Vector2.ZERO
 var manual_grace_timer: float = 0.0
 
+# Sistema Táctico Autónomo de Escape y Evasión (Context Steering)
+const NUM_STEER_DIRS: int = 16
+var emergency_escape_active: bool = false
+var emergency_escape_timer: float = 0.0
+
 func set_manual_input_vector(vec: Vector2) -> void:
 	manual_input_vector = vec
 	if vec.length_squared() > 0.01:
@@ -169,7 +174,13 @@ func _physics_process(delta: float) -> void:
 				_trigger_security_violation("Discrepancia en comprobación de integridad HEAP")
 				return
 		
-	# 1. NAVEGACIÓN Y PILOTAJE (Híbrido Manual / Automático)
+	# 1. NAVEGACIÓN Y PILOTAJE (Híbrido Manual / Automático con Evasión Táctica)
+	if emergency_escape_timer > 0.0:
+		emergency_escape_timer -= delta
+		emergency_escape_active = (emergency_escape_timer > 0.0)
+	else:
+		emergency_escape_active = false
+
 	var active_manual_dir := get_effective_manual_direction()
 	var desired_direction := Vector2.ZERO
 	
@@ -188,8 +199,9 @@ func _physics_process(delta: float) -> void:
 		else:
 			desired_direction = Vector2.ZERO
 			
-	var target_velocity := desired_direction * (base_speed * speed_multiplier)
-	var lerp_weight: float = 12.0 if is_manually_controlled() else 8.0
+	var speed_boost: float = 1.18 if emergency_escape_active else 1.0
+	var target_velocity := desired_direction * (base_speed * speed_multiplier * speed_boost)
+	var lerp_weight: float = 14.0 if (is_manually_controlled() or emergency_escape_active) else 8.5
 	current_velocity = current_velocity.lerp(target_velocity, lerp_weight * delta)
 	global_position += current_velocity * delta
 	
@@ -583,164 +595,213 @@ func trigger_phoenix_rebirth() -> void:
 		"width": 6.0
 	})
 
+func get_steer_rays() -> Array[Vector2]:
+	var r: Array[Vector2] = []
+	for i in range(NUM_STEER_DIRS):
+		var a: float = i * TAU / float(NUM_STEER_DIRS)
+		r.append(Vector2(cos(a), sin(a)))
+	return r
+
 func calculate_steering_direction() -> Vector2:
-	var avoidance_force := Vector2.ZERO
-	var scrap_force := Vector2.ZERO
-	var boundary_force := Vector2.ZERO
+	var rays := get_steer_rays()
+	var danger: Array[float] = []
+	danger.resize(NUM_STEER_DIRS)
+	danger.fill(0.0)
+	
+	var interest: Array[float] = []
+	interest.resize(NUM_STEER_DIRS)
+	interest.fill(0.0)
 	
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var enemy_count_in_danger: int = 0
-	var boss_present_nearby: bool = false
+	var critical_danger_count: int = 0
 	var boss_node: Node2D = null
 	var boss_dist: float = 99999.0
+	var boss_present_nearby: bool = false
 	
+	var v_size := get_viewport_rect().size
+	var center := v_size * 0.5
+	
+	# 1. EVALUAR AMENAZA DE ENEMIGOS (DRONES Y JEFES)
 	for enemy_node: Node in enemies:
 		var enemy := enemy_node as Node2D
 		if not is_instance_valid(enemy) or not is_target_on_screen(enemy):
 			continue
-		var dist: float = global_position.distance_to(enemy.global_position)
+			
+		var to_enemy: Vector2 = enemy.global_position - global_position
+		var dist: float = to_enemy.length()
+		if dist < 0.01:
+			continue
+			
 		var is_boss: bool = (enemy.get("drone_type") == "boss")
-		
 		if is_boss:
 			if dist < boss_dist:
 				boss_dist = dist
 				boss_node = enemy
 				
-			if dist < boss_danger_radius and dist > 0.01:
+			if dist < boss_danger_radius:
 				boss_present_nearby = true
-				enemy_count_in_danger += 3
-				var push_away: Vector2 = (global_position - enemy.global_position).normalized()
+				var b_dir := to_enemy / dist
 				
-				# 1. Repulsión radial calibrada para mantener distancia de seguridad
-				var boss_repulsion_weight: float = 0.0
+				# Amenaza radial del jefe: aumenta drásticamente en zona crítica (< 250px)
+				var boss_threat_w: float = 0.0
 				if dist < boss_critical_radius:
-					# Rango crítico (< 250px): empuje de retroceso de emergencia máximo
-					boss_repulsion_weight = 4.8 * (1.0 - (dist / boss_critical_radius)) + 2.8
+					boss_threat_w = 12.0 * (1.0 - (dist / boss_critical_radius)) + 6.0
+					critical_danger_count += 3
 				else:
-					# Rango táctico (250px a 430px): repulsión firme para sostener la distancia óptima (~360px)
 					var span: float = max(1.0, boss_danger_radius - boss_critical_radius)
-					boss_repulsion_weight = pow(1.0 - ((dist - boss_critical_radius) / span), 1.3) * 2.8
-				avoidance_force += push_away * boss_repulsion_weight
+					boss_threat_w = pow(1.0 - ((dist - boss_critical_radius) / span), 1.3) * 5.5
 				
-				# 2. Órbita Táctica y Flanqueo Lateral (Strafing / Kiting):
-				# En lugar de retroceder en línea recta contra la pared, el Mecha orbita al jefe
-				# a distancia segura, castigando sus flancos y eludiendo escudos frontales.
-				if dist < 400.0:
-					var tan1: Vector2 = Vector2(-push_away.y, push_away.x)
-					var tan2: Vector2 = Vector2(push_away.y, -push_away.x)
-					var v_size: Vector2 = get_viewport_rect().size
-					var arena_center: Vector2 = v_size * 0.5
-					var p1: Vector2 = global_position + tan1 * 90.0
-					var p2: Vector2 = global_position + tan2 * 90.0
-					var d1: float = p1.distance_to(arena_center)
-					var d2: float = p2.distance_to(arena_center)
-					if abs(d1 - d2) > 25.0:
-						boss_orbit_clockwise = (d1 <= d2)
-					var chosen_tan: Vector2 = tan1 if boss_orbit_clockwise else tan2
-					var strafe_factor: float = clampf((400.0 - dist) / 160.0, 0.4, 1.2)
-					avoidance_force += chosen_tan * (2.6 * strafe_factor)
-					
-				# 3. Evasión anticipada del Mega Hyper-Láser (Esquivar la línea roja de fuego)
+				for k in range(NUM_STEER_DIRS):
+					var dot: float = rays[k].dot(b_dir)
+					if dot > -0.2:
+						danger[k] += (dot + 0.2) * boss_threat_w
+						
+				# Evasión anticipada del Mega Hyper-Láser del Jefe
 				var laser_state: Variant = enemy.get("boss_laser_state")
-				if laser_state != null and int(laser_state) != 0: # CHARGING (1) o FIRING (2)
+				if laser_state != null and int(laser_state) != 0:
 					var l_angle: float = float(enemy.get("boss_laser_angle"))
 					var l_dir: Vector2 = Vector2.from_angle(l_angle)
-					var to_mecha: Vector2 = global_position - enemy.global_position
-					var forward_proj: float = to_mecha.dot(l_dir)
+					var forward_proj: float = (-to_enemy).dot(l_dir)
 					if forward_proj > 0.0 and forward_proj < 1050.0:
 						var closest_beam_pt: Vector2 = enemy.global_position + l_dir * forward_proj
 						var dist_to_beam: float = global_position.distance_to(closest_beam_pt)
-						if dist_to_beam < 130.0:
+						if dist_to_beam < 140.0:
 							var dodge_dir: Vector2 = (global_position - closest_beam_pt).normalized()
 							if dodge_dir.length_squared() < 0.01:
 								dodge_dir = Vector2(-l_dir.y, l_dir.x)
-							var dodge_weight: float = clampf((1.0 - (dist_to_beam / 130.0)) * 5.5, 2.5, 6.0)
-							avoidance_force += dodge_dir * dodge_weight
-							
-				# 4. Evasión de Onda de Choque EMP Expansiva
+							for k in range(NUM_STEER_DIRS):
+								var dot_laser: float = rays[k].dot(-dodge_dir)
+								if dot_laser > 0.0:
+									danger[k] += dot_laser * 14.0
+									
+				# Evasión de Onda EMP expansiva del Jefe
 				var emp_active: Variant = enemy.get("boss_emp_active")
-				if emp_active == true and dist < 320.0:
-					avoidance_force += push_away * 3.6
+				if emp_active == true and dist < 340.0:
+					for k in range(NUM_STEER_DIRS):
+						var dot_emp: float = rays[k].dot(b_dir)
+						if dot_emp > -0.3:
+							danger[k] += (dot_emp + 0.3) * 8.0
 		else:
-			# Drones menores (scout, tank, swarm, shooter)
-			if dist < danger_radius and dist > 0.01:
-				var push_away: Vector2 = (global_position - enemy.global_position).normalized()
-				var weight: float = (1.0 - (dist / danger_radius)) * 2.2
-				avoidance_force += push_away * weight
+			# Drones menores (Scout, Swarm, Tank, Shooter, Kamikaze)
+			if dist < danger_radius + 60.0: # Detección anticipada hasta 230px
+				var e_dir := to_enemy / dist
+				var w: float = pow(1.0 - (dist / (danger_radius + 60.0)), 1.3) * 2.8
+				if dist < 110.0:
+					critical_danger_count += 1
+					w += 3.5
 				enemy_count_in_danger += 1
-			
-	# Evasión táctica de proyectiles enemigos
+				
+				for k in range(NUM_STEER_DIRS):
+					var dot: float = rays[k].dot(e_dir)
+					if dot > 0.0:
+						danger[k] += (dot * dot) * w
+
+	# 2. EVALUAR AMENAZA DE PROYECTILES ENEMIGOS
 	var enemy_bullets := get_tree().get_nodes_in_group("enemy_bullets")
 	for b in enemy_bullets:
 		if not is_instance_valid(b):
 			continue
-		var dist_b := global_position.distance_to(b.global_position)
-		if dist_b < 140.0 and dist_b > 0.01:
-			var push_b: Vector2 = (global_position - b.global_position).normalized()
-			var weight_b: float = (1.0 - (dist_b / 140.0)) * 3.2
-			avoidance_force += push_b * weight_b
+		var to_b: Vector2 = b.global_position - global_position
+		var dist_b: float = to_b.length()
+		if dist_b < 150.0 and dist_b > 0.01:
+			var b_dir := to_b / dist_b
+			var w_b: float = (1.0 - (dist_b / 150.0)) * 3.5
+			for k in range(NUM_STEER_DIRS):
+				var dot: float = rays[k].dot(b_dir)
+				if dot > 0.0:
+					danger[k] += dot * w_b
+
+	# 3. EVALUAR AMENAZA DE PAREDES Y ESQUINAS (Anticipación predictiva para jamás encasillarse)
+	var wall_margin: float = 70.0
+	for k in range(NUM_STEER_DIRS):
+		var test_p: Vector2 = global_position + rays[k] * 120.0
+		if test_p.x < wall_margin:
+			danger[k] += pow((wall_margin - test_p.x) / wall_margin, 2.0) * 9.0
+		elif test_p.x > v_size.x - wall_margin:
+			danger[k] += pow((test_p.x - (v_size.x - wall_margin)) / wall_margin, 2.0) * 9.0
+		if test_p.y < wall_margin:
+			danger[k] += pow((wall_margin - test_p.y) / wall_margin, 2.0) * 9.0
+		elif test_p.y > v_size.y - wall_margin:
+			danger[k] += pow((test_p.y - (v_size.y - wall_margin)) / wall_margin, 2.0) * 9.0
+
+	# 4. EVALUAR INTERÉS (MOMENTUM, CENTRO, FLANQUEO AL JEFE Y CHATARRA)
+	var vel_norm := current_velocity.normalized() if current_velocity.length_squared() > 100.0 else Vector2.ZERO
+	var to_center := (center - global_position).normalized()
+	var dist_to_center := global_position.distance_to(center)
+	
+	# Strafe / Órbita inteligente alrededor del jefe en corredores despejados
+	var boss_strafe_dir := Vector2.ZERO
+	if boss_present_nearby and is_instance_valid(boss_node) and boss_dist < 440.0:
+		var push_away: Vector2 = (global_position - boss_node.global_position).normalized()
+		var tan1 := Vector2(-push_away.y, push_away.x)
+		var tan2 := Vector2(push_away.y, -push_away.x)
+		
+		var danger_tan1: float = 0.0
+		var danger_tan2: float = 0.0
+		for k in range(NUM_STEER_DIRS):
+			if rays[k].dot(tan1) > 0.6:
+				danger_tan1 += danger[k]
+			if rays[k].dot(tan2) > 0.6:
+				danger_tan2 += danger[k]
+				
+		boss_strafe_dir = tan1 if (danger_tan1 <= danger_tan2) else tan2
+		
+	for k in range(NUM_STEER_DIRS):
+		# A. Momentum: preferencia a mantener la dirección para evitar titubeos
+		if vel_norm != Vector2.ZERO:
+			interest[k] += rays[k].dot(vel_norm) * 0.45
 			
-	# 2. Atracción hacia el Scrap/XP más cercano (prioridad segura)
-	var allow_scrap: bool = (enemy_count_in_danger < 4) and (not boss_present_nearby or boss_dist > 360.0)
+		# B. Centro táctico (solo si el jefe o enjambre no compromete la seguridad)
+		if dist_to_center > 40.0 and (not boss_present_nearby or boss_dist > 380.0):
+			var center_bias: float = 0.25 if enemy_count_in_danger < 2 else 0.1
+			interest[k] += rays[k].dot(to_center) * center_bias
+			
+		# C. Flanqueo al jefe
+		if boss_strafe_dir != Vector2.ZERO:
+			var strafe_factor: float = clampf((440.0 - boss_dist) / 180.0, 0.4, 1.3)
+			interest[k] += rays[k].dot(boss_strafe_dir) * (1.6 * strafe_factor)
+
+	# D. Atracción de Chatarra (Scrap/XP) cuando el camino es seguro
+	var allow_scrap: bool = (enemy_count_in_danger < 3) and (not boss_present_nearby or boss_dist > 360.0)
 	if allow_scrap:
 		var closest_scrap := get_closest_scrap()
 		if is_instance_valid(closest_scrap):
-			var scrap_pos: Vector2 = closest_scrap.global_position
-			var safe_to_pickup: bool = true
-			if boss_present_nearby and is_instance_valid(boss_node):
-				# Si el scrap está en la zona de peligro del jefe (< 290px), ignorarlo para no suicidarse
-				if scrap_pos.distance_to(boss_node.global_position) < 290.0:
-					safe_to_pickup = false
-			if safe_to_pickup:
-				var scrap_weight: float = 0.9 if boss_present_nearby else 1.8
-				scrap_force = (scrap_pos - global_position).normalized() * scrap_weight
-			
-	# 3. Retorno instintivo al CENTRO TÁCTICO de la arena (cuando el camino está despejado)
-	var viewport_size := get_viewport_rect().size
-	var center := viewport_size * 0.5
-	var center_force := Vector2.ZERO
-	var dist_to_center := global_position.distance_to(center)
-	
-	# Si el jefe está situado en o cerca del centro, el centro NO es una zona segura
-	var center_compromised: bool = false
-	if is_instance_valid(boss_node) and boss_dist < 520.0:
-		if boss_node.global_position.distance_to(center) < 250.0:
-			center_compromised = true
-			
-	if dist_to_center > 30.0 and not center_compromised:
-		var center_weight: float = 1.0 if enemy_count_in_danger == 0 else 0.4
-		if boss_present_nearby:
-			center_weight = 0.15 # Espaciado y órbita del jefe tienen prioridad sobre el centro
-		var speed_factor: float = clampf((dist_to_center - 30.0) / 160.0, 0.0, 1.0)
-		center_force = (center - global_position).normalized() * speed_factor * center_weight
+			var to_scrap: Vector2 = (closest_scrap.global_position - global_position).normalized()
+			for k in range(NUM_STEER_DIRS):
+				interest[k] += rays[k].dot(to_scrap) * 1.4
 
-	# 4. Repulsión de bordes de la pantalla
-	var boundary_margin: float = 65.0
+	# 5. RESOLUCIÓN DE RUTA DE ESCAPE / BRECHA TÁCTICA
+	var is_under_threat: bool = (enemy_count_in_danger > 0) or boss_present_nearby or (critical_danger_count > 0)
 	
-	if global_position.x < boundary_margin:
-		var factor := (boundary_margin - global_position.x) / boundary_margin
-		boundary_force.x += factor * 3.0
-	elif global_position.x > viewport_size.x - boundary_margin:
-		var factor := (global_position.x - (viewport_size.x - boundary_margin)) / boundary_margin
-		boundary_force.x -= factor * 3.0
+	# Activar propulsores de emergencia si está en peligro inminente o rodeado
+	if critical_danger_count >= 1 or enemy_count_in_danger >= 4:
+		emergency_escape_timer = 0.35
 		
-	if global_position.y < boundary_margin:
-		var factor := (boundary_margin - global_position.y) / boundary_margin
-		boundary_force.y += factor * 3.0
-	elif global_position.y > viewport_size.y - boundary_margin:
-		var factor := (global_position.y - (viewport_size.y - boundary_margin)) / boundary_margin
-		boundary_force.y -= factor * 3.0
-
-	# Suma ponderada de fuerzas
-	var total_vector: Vector2 = (avoidance_force * 2.0) + scrap_force + boundary_force + (center_force * 1.4)
-	
-	# Si está en el centro sin enemigos ni chatarra de peligro, frenado absoluto (deadband limpio)
-	if avoidance_force.length_squared() < 0.01 and scrap_force.length_squared() < 0.01 and dist_to_center <= 30.0:
+	# Si no hay peligro alguno y está centrado y sin chatarra, frenar en punto muerto
+	if not is_under_threat and dist_to_center <= 35.0 and not allow_scrap:
 		return Vector2.ZERO
 		
-	if total_vector.length() > 1.0:
-		return total_vector.normalized()
-	return total_vector
+	# Encontrar la dirección con la brecha de escape óptima (Menor peligro, mayor interés)
+	var best_k: int = 0
+	var best_score: float = 999999.0
+	for k in range(NUM_STEER_DIRS):
+		var score: float = danger[k] - interest[k]
+		if score < best_score:
+			best_score = score
+			best_k = k
+			
+	# Suavizado cinemático: combinar sólo los rayos adyacentes del corredor elegido
+	var chosen_dir := Vector2.ZERO
+	for offset in [-1, 0, 1]:
+		var idx: int = (best_k + offset + NUM_STEER_DIRS) % NUM_STEER_DIRS
+		var safety: float = max(0.05, 3.5 - danger[idx])
+		chosen_dir += rays[idx] * safety
+		
+	if chosen_dir.length_squared() > 0.01:
+		return chosen_dir.normalized()
+		
+	return Vector2.ZERO
 
 func get_closest_enemy() -> Node2D:
 	var enemies := get_tree().get_nodes_in_group("enemies")
@@ -1028,12 +1089,15 @@ func _draw() -> void:
 		Vector2(8, -14)
 	])
 	
-	# Propulsores manuales activos (Fogonazo de plasma ámbar en toberas traseras)
-	if is_manually_controlled() and current_velocity.length_squared() > 400.0:
-		var thrust_flicker: float = sin(electric_anim_time * 14.0) * 4.0
+	# Propulsores de toberas traseras (en piloto automático o manual con postquemadores de escape)
+	if current_velocity.length_squared() > 400.0:
+		var thrust_flicker: float = sin(electric_anim_time * 16.0) * 4.0
+		var jet_color: Color = Color(1.0, 0.65, 0.2, 0.95) if (is_manually_controlled() or emergency_escape_active) else Color(0.2, 0.85, 1.0, 0.75)
+		var core_color: Color = Color(1.0, 1.0, 1.0, 1.0)
+		var jet_len: float = 28.0 if emergency_escape_active else 22.0
 		for off_y in [-8.0, 8.0]:
-			draw_line(Vector2(-14, off_y), Vector2(-24 - thrust_flicker, off_y), Color(1.0, 0.75, 0.2, 0.85), 3.5)
-			draw_line(Vector2(-14, off_y), Vector2(-19 - thrust_flicker * 0.5, off_y), Color(1.0, 1.0, 1.0), 1.8)
+			draw_line(Vector2(-14, off_y), Vector2(-jet_len - thrust_flicker, off_y), jet_color, 4.0 if emergency_escape_active else 2.6)
+			draw_line(Vector2(-14, off_y), Vector2(-jet_len * 0.65 - thrust_flicker * 0.5, off_y), core_color, 1.8)
 
 	draw_colored_polygon(chassis_points, Color(0.12, 0.16, 0.24, 1.0))
 	var border_color := Color(1.0, 0.85, 0.2, 1.0) if has_ultimate_beam else Color(0.2, 0.9, 1.0, 1.0)
