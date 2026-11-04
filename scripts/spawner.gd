@@ -7,14 +7,8 @@ var squad_timer: float = 0.8
 var next_swarm_time: float = 40.0
 
 var beam_surge_notified: bool = false
-var pending_boss_level: int = 0
-var spawned_level_bosses: Dictionary = {
-	10: false,
-	20: false,
-	30: false,
-	40: false,
-	50: false
-}
+var pending_boss_queue: Array[int] = []
+var spawned_level_bosses: Dictionary = {}
 
 ## Calcula el multiplicador dinámico de densidad combinando Nivel (Opción 2) y Ultimates (Opción 3)
 func get_horde_density_multiplier() -> float:
@@ -68,53 +62,94 @@ func is_boss_alive() -> bool:
 	return false
 
 func _on_mecha_level_up(lvl: int) -> void:
-	if lvl in spawned_level_bosses and not spawned_level_bosses[lvl]:
-		pending_boss_level = lvl
+	if lvl > 0 and lvl % 10 == 0 and not spawned_level_bosses.get(lvl, false):
+		spawned_level_bosses[lvl] = true
+		if not pending_boss_queue.has(lvl):
+			pending_boss_queue.append(lvl)
+
+func get_roman_numeral(n: int) -> String:
+	var roman_map := [
+		[100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
+		[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]
+	]
+	var res := ""
+	for pair in roman_map:
+		while n >= pair[0]:
+			res += str(pair[1])
+			n -= int(pair[0])
+	return res if res != "" else "I"
 
 func spawn_level_boss(lvl: int) -> void:
 	var v_size := get_viewport_rect().size
 	var spawn_pos := Vector2(v_size.x * 0.5, -90.0)
+	var boss_idx: int = int(lvl / 10)
+	var roman: String = get_roman_numeral(boss_idx)
+	var boss_hp: float = float(boss_idx) * 5000.0
 	
-	match lvl:
-		10:
+	# Rotación modular infinita entre los 5 arquetipos de Jefes
+	var archetype: int = (boss_idx - 1) % 5
+	var boss_name_str := ""
+	var alert_msg := ""
+	
+	match archetype:
+		0:
+			var prefix := "AEGIS COLOSSUS" if boss_idx == 1 else "AEGIS COLOSSUS PRIME"
+			boss_name_str = "%s (MK. %s)" % [prefix, roman]
+			alert_msg = "[!] AMENAZA NIVEL %d: %s [!]" % [lvl, boss_name_str]
 			if hud and hud.has_method("show_alert"):
-				hud.show_alert("[!] AMENAZA NIVEL 10: AEGIS COLOSSUS (MK. I) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 5000.0, "AEGIS COLOSSUS (MK. I)")
-			for i in range(4):
-				var angle := i * (TAU / 4.0)
-				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 85.0, "tank", 180.0)
-		20:
+				hud.show_alert(alert_msg)
+			spawn_drone_at_pos(spawn_pos, "boss", boss_hp, boss_name_str)
+			# Escolta de tanques (4 base + 2 por cada ciclo completo)
+			var tank_count: int = 4 + int((boss_idx - 1) / 5) * 2
+			for i in range(tank_count):
+				var angle := i * (TAU / float(tank_count))
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 85.0, "tank", 180.0 + (boss_idx * 20.0))
+		1:
+			var prefix := "HIVE HYDRA" if boss_idx == 2 else "HIVE HYDRA REVENANT"
+			boss_name_str = "%s (MK. %s)" % [prefix, roman]
+			alert_msg = "[!] AMENAZA NIVEL %d: %s [!]" % [lvl, boss_name_str]
 			if hud and hud.has_method("show_alert"):
-				hud.show_alert("[!] AMENAZA NIVEL 20: HIVE HYDRA (MK. II) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 10000.0, "HIVE HYDRA (MK. II)")
-			for i in range(6):
-				var angle := i * (TAU / 6.0)
-				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 95.0, "swarm", 50.0)
-		30:
+				hud.show_alert(alert_msg)
+			spawn_drone_at_pos(spawn_pos, "boss", boss_hp, boss_name_str)
+			# Escolta de avispas rápidas (6 base + 2 por cada ciclo completo)
+			var swarm_count: int = 6 + int((boss_idx - 2) / 5) * 2
+			for i in range(swarm_count):
+				var angle := i * (TAU / float(swarm_count))
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 95.0, "swarm", 50.0 + (boss_idx * 10.0))
+		2:
+			var prefix := "CHRONOS DREADNOUGHT" if boss_idx == 3 else "CHRONOS DREADNOUGHT WARP"
+			boss_name_str = "%s (MK. %s)" % [prefix, roman]
+			alert_msg = "[!] AMENAZA NIVEL %d: %s [!]" % [lvl, boss_name_str]
 			if hud and hud.has_method("show_alert"):
-				hud.show_alert("[!] AMENAZA NIVEL 30: CHRONOS DREADNOUGHT (MK. III) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 15000.0, "CHRONOS DREADNOUGHT (MK. III)")
-			for i in range(5):
-				var angle := i * (TAU / 5.0)
-				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 105.0, "shooter", 140.0)
-		40:
+				hud.show_alert(alert_msg)
+			spawn_drone_at_pos(spawn_pos, "boss", boss_hp, boss_name_str)
+			# Escolta de francotiradores (5 base + 2 por cada ciclo completo)
+			var shooter_count: int = 5 + int((boss_idx - 3) / 5) * 2
+			for i in range(shooter_count):
+				var angle := i * (TAU / float(shooter_count))
+				spawn_drone_at_pos(spawn_pos + Vector2(cos(angle), sin(angle)) * 105.0, "shooter", 140.0 + (boss_idx * 15.0))
+		3:
+			var prefix := "APEX ANNIHILATOR" if boss_idx == 4 else "APEX ANNIHILATOR ECLIPSE"
+			boss_name_str = "%s (MK. %s)" % [prefix, roman]
+			alert_msg = "[!] AMENAZA NIVEL %d: %s [!]" % [lvl, boss_name_str]
 			if hud and hud.has_method("show_alert"):
-				hud.show_alert("[!] AMENAZA NIVEL 40: APEX ANNIHILATOR (MK. IV) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 20000.0, "APEX ANNIHILATOR (MK. IV)")
-		50:
+				hud.show_alert(alert_msg)
+			spawn_drone_at_pos(spawn_pos, "boss", boss_hp, boss_name_str)
+		4:
+			var prefix := "OMEGA SINGULARITY GOD" if boss_idx == 5 else "OMEGA SINGULARITY DEITY"
+			boss_name_str = "%s (MK. %s)" % [prefix, roman]
+			alert_msg = "[!] ALERTA APOCALÍPTICA: %s [!]" % [boss_name_str]
 			if hud and hud.has_method("show_alert"):
-				hud.show_alert("[!] ALERTA APOCALÍPTICA: OMEGA SINGULARITY GOD (MK. V) [!]")
-			spawn_drone_at_pos(spawn_pos, "boss", 25000.0, "OMEGA SINGULARITY GOD (MK. V)")
+				hud.show_alert(alert_msg)
+			spawn_drone_at_pos(spawn_pos, "boss", boss_hp, boss_name_str)
 
 func _physics_process(delta: float) -> void:
 	elapsed_time += delta
 	squad_timer -= delta
 	
 	# Despliegue de Jefes por Nivel garantizando sólo 1 jefe activo a la vez
-	if pending_boss_level > 0 and not is_boss_alive():
-		var b_lvl := pending_boss_level
-		pending_boss_level = 0
-		spawned_level_bosses[b_lvl] = true
+	if not pending_boss_queue.is_empty() and not is_boss_alive():
+		var b_lvl: int = pending_boss_queue.pop_front()
 		spawn_level_boss(b_lvl)
 	
 	# Eventos de Enjambres Periódicos (Pausados durante combates de jefes)
